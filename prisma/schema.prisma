@@ -1,0 +1,22 @@
+// Castalia Chronicles — Prisma schema
+// Database: PostgreSQL (Railway separate service, URL configured in prisma.config.ts and via PrismaClient adapter)
+// NEVER use SQLite or any file-based database — the app folder is wiped on redeploy.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- User model (authentication) ---
+// Visitors never log in; only admin users do.
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

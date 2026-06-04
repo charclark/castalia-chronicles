@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
+/* ── Design tokens ──────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Palette — deep, moody, gothic-literary */
+  --color-bg:           #0e0c0f;
+  --color-bg-surface:   #16121a;
+  --color-bg-elevated:  #1f1827;
+  --color-border:       #2e2538;
+  --color-border-light: #3d3249;
+
+  --color-ink:          #e8e0d5;
+  --color-ink-muted:    #a09490;
+  --color-ink-faint:    #635a5a;
+
+  --color-gold:         #c9a84c;
+  --color-gold-dim:     #8b7035;
+  --color-crimson:      #8b2635;
+  --color-crimson-dim:  #5c1824;
+
+  /* Typography — variable names match next/font/google variables */
+  --font-heading: var(--font-cormorant), "Garamond", "Georgia", serif;
+  --font-body:    var(--font-eb-garamond), "Garamond", "Georgia", serif;
 }
 
+/* ── Tailwind theme bridge ──────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-ink);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-heading);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Base reset / global styles ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 18px;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+}
+
+/* ── Typography ─────────────────────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-ink);
+  letter-spacing: 0.02em;
+}
+
+h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); }
+h2 { font-size: clamp(1.8rem, 4vw, 3rem); }
+h3 { font-size: clamp(1.4rem, 3vw, 2.2rem); }
+h4 { font-size: clamp(1.2rem, 2.5vw, 1.8rem); }
+
+p {
+  font-family: var(--font-body);
+  color: var(--color-ink-muted);
+  line-height: 1.8;
+}
+
+a {
+  color: var(--color-gold);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+a:hover { color: var(--color-gold-dim); }
+
+/* ── Utility classes ────────────────────────────────────────────────────── */
+.font-heading { font-family: var(--font-heading); }
+.font-body    { font-family: var(--font-body); }
+.text-gold    { color: var(--color-gold); }
+.text-crimson { color: var(--color-crimson); }
+.text-muted   { color: var(--color-ink-muted); }
+.text-faint   { color: var(--color-ink-faint); }
+
+.surface   { background-color: var(--color-bg-surface); }
+.elevated  { background-color: var(--color-bg-elevated); }
+.bordered  { border: 1px solid var(--color-border); }
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--color-bg); }
+::-webkit-scrollbar-thumb  { background: var(--color-border-light); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold-dim); }
+
+/* ── Selection ──────────────────────────────────────────────────────────── */
+::selection {
+  background-color: var(--color-gold);
+  color: var(--color-bg);
 }
