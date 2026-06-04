@@ -2,6 +2,7 @@
 
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import ConnectionsMap from "./ConnectionsMap";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -299,6 +300,57 @@ export default function PopupLayer({
 
   if (!popup || !universeId) return null;
 
+  function close() {
+    router.push(pathname, { scroll: false });
+  }
+
+  // ── Connections Map — special full-size layout, handled first ─────────────
+  if (popup === "connections") {
+    return (
+      <div
+        style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(10,8,12,0.75)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: "2vh 1.5rem",
+        }}
+        onClick={(e) => { if (e.target === e.currentTarget) close(); }}
+      >
+        <div
+          style={{
+            background: "var(--color-bg-elevated)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "4px",
+            width: "100%", maxWidth: "1100px",
+            height: "86vh",
+            display: "flex", flexDirection: "column",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.75rem", borderBottom: "1px solid var(--color-border)", flexShrink: 0 }}>
+            <h2 style={{ fontFamily: "var(--font-heading)", fontSize: "1.8rem", fontWeight: 400, color: "var(--color-ink)", letterSpacing: "0.04em" }}>
+              Connections Map
+            </h2>
+            <button
+              onClick={close}
+              aria-label="Close popup"
+              style={{
+                background: "transparent", border: "1px solid var(--color-border)",
+                borderRadius: "3px", color: "var(--color-ink-muted)",
+                fontSize: "1rem", cursor: "pointer",
+                padding: "0.3rem 0.6rem", lineHeight: 1,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+          <ConnectionsMap />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Standard card-grid popups ─────────────────────────────────────────────
+
   let title = "";
   let newHref = "";
   let content: React.ReactNode = null;
@@ -340,10 +392,6 @@ export default function PopupLayer({
 
   } else {
     return null;
-  }
-
-  function close() {
-    router.push(pathname, { scroll: false });
   }
 
   return (

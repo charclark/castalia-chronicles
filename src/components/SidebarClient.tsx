@@ -350,10 +350,12 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
         entryHref={(id) => `/admin/locations/${id}`}
       />
 
-      {/* Connections Map — placeholder (no arrow, not a list) */}
+      {/* Connections Map */}
       <div style={itemRow}>
         <span style={{ width: "22px", flexShrink: 0 }} />
-        <span style={placeholderWord}>Connections Map</span>
+        <button style={wordBtn} onClick={() => openPopup("connections")}>
+          Connections Map
+        </button>
       </div>
 
       {/* Divider */}
