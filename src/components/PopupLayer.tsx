@@ -20,6 +20,14 @@ type CharacterEntry = {
   createdAt: Date;
 };
 
+type LocationEntry = {
+  id: string;
+  name: string;
+  locatedIn?: string | null;
+  atmosphere?: string | null;
+  createdAt: Date;
+};
+
 // ── Shared card components ───────────────────────────────────────────────────
 
 function TextCard({ entry, href }: { entry: TextEntry; href: string }) {
@@ -141,17 +149,86 @@ function CharacterCard({ char, href }: { char: CharacterEntry; href: string }) {
   );
 }
 
+function LocationCard({ loc, href }: { loc: LocationEntry; href: string }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "block",
+        background: "var(--color-bg-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: "4px",
+        padding: "1.1rem 1.25rem",
+        textDecoration: "none",
+        transition: "border-color 0.15s",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
+    >
+      <h3
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontSize: "1.2rem",
+          fontWeight: 400,
+          color: "var(--color-ink)",
+          marginBottom: "0.35rem",
+        }}
+      >
+        {loc.name}
+      </h3>
+      {loc.locatedIn && (
+        <p
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "0.82rem",
+            color: "var(--color-ink-muted)",
+            lineHeight: 1.5,
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 1,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {loc.locatedIn}
+        </p>
+      )}
+      {loc.atmosphere && (
+        <p
+          style={{
+            fontFamily: "var(--font-body)",
+            fontSize: "0.82rem",
+            color: "var(--color-ink-muted)",
+            lineHeight: 1.5,
+            fontStyle: "italic",
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
+          {loc.atmosphere}
+        </p>
+      )}
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", marginTop: "0.6rem" }}>
+        {loc.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+      </p>
+    </Link>
+  );
+}
+
 // ── PopupLayer ───────────────────────────────────────────────────────────────
 
 export default function PopupLayer({
   ideas,
   notes,
   characters,
+  locations,
   universeId,
 }: {
   ideas: TextEntry[];
   notes: TextEntry[];
   characters: CharacterEntry[];
+  locations: LocationEntry[];
   universeId: string | null;
 }) {
   const searchParams = useSearchParams();
@@ -185,6 +262,13 @@ export default function PopupLayer({
     content = characters.length === 0
       ? <EmptyState title={title} newHref={newHref} />
       : <CardGrid>{characters.map((c) => <CharacterCard key={c.id} char={c} href={`/admin/characters/${c.id}`} />)}</CardGrid>;
+
+  } else if (popup === "locations") {
+    title = "Locations";
+    newHref = "/admin/locations/new";
+    content = locations.length === 0
+      ? <EmptyState title={title} newHref={newHref} />
+      : <CardGrid>{locations.map((l) => <LocationCard key={l.id} loc={l} href={`/admin/locations/${l.id}`} />)}</CardGrid>;
 
   } else {
     return null;

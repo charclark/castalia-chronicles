@@ -29,7 +29,7 @@ export default async function AdminLayout({
       : (universes[0]?.id ?? null);
 
   // Sidebar data — scoped to current universe
-  const [ideas, notes, plotItems, characters] = currentUniverseId
+  const [ideas, notes, plotItems, characters, locations] = currentUniverseId
     ? await Promise.all([
         prisma.storylineIdea.findMany({
           where: { universeId: currentUniverseId },
@@ -51,8 +51,13 @@ export default async function AdminLayout({
           orderBy: { name: "asc" },
           select: { id: true, name: true, characterType: true, notes: true, createdAt: true },
         }),
+        prisma.location.findMany({
+          where: { universeId: currentUniverseId },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true, locatedIn: true, atmosphere: true, createdAt: true },
+        }),
       ])
-    : [[], [], [], []];
+    : [[], [], [], [], []];
 
   return (
     <div
@@ -76,6 +81,7 @@ export default async function AdminLayout({
           notes={notes}
           plotItems={plotItems}
           characters={characters}
+          locations={locations}
         />
         <main
           style={{
@@ -94,6 +100,7 @@ export default async function AdminLayout({
           ideas={ideas}
           notes={notes}
           characters={characters}
+          locations={locations}
           universeId={currentUniverseId}
         />
       </Suspense>

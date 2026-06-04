@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 
 type Entry = { id: string; title: string };
 type CharEntry = { id: string; name: string };
+type LocEntry = { id: string; name: string };
 type PlotEntry = { id: string; text: string; checked: boolean };
 
 export type SidebarData = {
@@ -14,6 +15,7 @@ export type SidebarData = {
   notes: Entry[];
   plotItems: PlotEntry[];
   characters: CharEntry[];
+  locations: LocEntry[];
 };
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -279,7 +281,7 @@ function PlotChecklistTool({
 
 // ── Main sidebar ─────────────────────────────────────────────────────────────
 
-export default function SidebarClient({ universeId, ideas, notes, plotItems, characters }: SidebarData) {
+export default function SidebarClient({ universeId, ideas, notes, plotItems, characters, locations }: SidebarData) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -338,8 +340,13 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
         entryHref={(id) => `/admin/characters/${id}`}
       />
 
-      {/* Locations — placeholder */}
-      <SidebarTool label="Locations" isPlaceholder />
+      {/* Locations */}
+      <SidebarTool
+        label="Locations"
+        entries={locations.map((l) => ({ id: l.id, title: l.name }))}
+        onWordClick={() => openPopup("locations")}
+        entryHref={(id) => `/admin/locations/${id}`}
+      />
 
       {/* Connections Map — placeholder (no arrow, not a list) */}
       <div style={itemRow}>

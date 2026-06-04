@@ -34,6 +34,7 @@ model Universe {
   notes          Note[]
   plotItems      PlotItem[]
   characters     Character[]
+  locations      Location[]
 }
 
 // --- Characters ---
@@ -127,6 +128,27 @@ model Note {
   content    String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([universeId])
+}
+
+// --- Locations ---
+// Place profiles. locatedIn is free text describing where in the world.
+// climate, atmosphere, description, and notes are all optional long-form fields.
+model Location {
+  id          String   @id @default(cuid())
+  universeId  String
+  universe    Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  name        String
+  locatedIn   String?  // where it sits within the world (free text)
+  climate     String?  // weather / climate
+  atmosphere  String?  // feel / atmosphere
+  description String?  // what the place is like
+  notes       String?  // general notes
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([universeId])
 }
