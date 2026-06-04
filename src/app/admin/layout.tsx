@@ -1,8 +1,11 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import AdminNav from "@/components/AdminNav";
+import SidebarClient from "@/components/SidebarClient";
+import PopupLayer from "@/components/PopupLayer";
 
 export default async function AdminLayout({
   children,
@@ -12,13 +15,12 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  // Fetch all universes for the selector
+  // Universe selector data
   const universes = await prisma.universe.findMany({
     orderBy: { createdAt: "asc" },
     select: { id: true, name: true },
   });
 
-  // Resolve the currently selected universe from cookie
   const cookieStore = await cookies();
   const cookieId = cookieStore.get("selected-universe")?.value ?? null;
   const currentUniverseId =
@@ -26,24 +28,68 @@ export default async function AdminLayout({
       ? cookieId
       : (universes[0]?.id ?? null);
 
+  // Sidebar data — scoped to current universe
+  const [ideas, notes, plotItems] = currentUniverseId
+    ? await Promise.all([
+        prisma.storylineIdea.findMany({
+          where: { universeId: currentUniverseId },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, title: true, content: true, createdAt: true },
+        }),
+        prisma.note.findMany({
+          where: { universeId: currentUniverseId },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, title: true, content: true, createdAt: true },
+        }),
+        prisma.plotItem.findMany({
+          where: { universeId: currentUniverseId },
+          orderBy: [{ checked: "asc" }, { createdAt: "asc" }],
+          select: { id: true, text: true, checked: true },
+        }),
+      ])
+    : [[], [], []];
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       <AdminNav
         username={session.username}
         universes={universes}
         currentUniverseId={currentUniverseId}
       />
-      <main
-        style={{
-          flex: 1,
-          padding: "2.5rem 2rem",
-          maxWidth: "1200px",
-          width: "100%",
-          margin: "0 auto",
-        }}
-      >
-        {children}
-      </main>
+
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <SidebarClient
+          universeId={currentUniverseId}
+          ideas={ideas}
+          notes={notes}
+          plotItems={plotItems}
+        />
+        <main
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "2.5rem 2rem",
+          }}
+        >
+          {children}
+        </main>
+      </div>
+
+      {/* Popup layer — Suspense required because it reads useSearchParams */}
+      <Suspense>
+        <PopupLayer
+          ideas={ideas}
+          notes={notes}
+          universeId={currentUniverseId}
+        />
+      </Suspense>
     </div>
   );
 }
