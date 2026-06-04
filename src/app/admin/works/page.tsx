@@ -17,6 +17,7 @@ export default async function WorksPage() {
       title: true,
       type: true,
       status: true,
+      publishMode: true,
       updatedAt: true,
       coverImage: { select: { id: true, label: true } },
     },
@@ -78,6 +79,7 @@ type WorkItem = {
   title: string;
   type: string;
   status: string;
+  publishMode: string | null;
   updatedAt: Date;
   coverImage: { id: string; label: string } | null;
 };
@@ -227,7 +229,7 @@ function WorkRow({ item }: { item: WorkItem }) {
       <div
         style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}
       >
-        <StatusBadge status={item.status} />
+        <StatusBadge status={item.status} publishMode={item.publishMode} />
         <span
           style={{
             fontFamily: "var(--font-body)",
@@ -242,22 +244,31 @@ function WorkRow({ item }: { item: WorkItem }) {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const published = status === "published";
+function StatusBadge({
+  status,
+  publishMode,
+}: {
+  status: string;
+  publishMode: string | null;
+}) {
+  if (status !== "published") {
+    return (
+      <span style={{
+        fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
+        textTransform: "uppercase", color: "var(--color-ink-faint)",
+        border: "1px solid var(--color-border)", borderRadius: "2px", padding: "0.1rem 0.45rem",
+      }}>
+        Private
+      </span>
+    );
+  }
   return (
-    <span
-      style={{
-        fontFamily: "var(--font-body)",
-        fontSize: "0.65rem",
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        color: published ? "var(--color-gold)" : "var(--color-ink-faint)",
-        border: `1px solid ${published ? "var(--color-gold-dim)" : "var(--color-border)"}`,
-        borderRadius: "2px",
-        padding: "0.1rem 0.45rem",
-      }}
-    >
-      {published ? "Published" : "Private"}
+    <span style={{
+      fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
+      textTransform: "uppercase", color: "var(--color-gold)",
+      border: "1px solid var(--color-gold-dim)", borderRadius: "2px", padding: "0.1rem 0.45rem",
+    }}>
+      {publishMode === "snippet" ? "Snippet" : "Published"}
     </span>
   );
 }

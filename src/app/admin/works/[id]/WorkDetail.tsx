@@ -1,15 +1,25 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { renameWork, setCoverImage, deleteWork } from "@/app/actions/works";
+import {
+  renameWork,
+  setCoverImage,
+  deleteWork,
+  publishWork,
+  unpublishWork,
+} from "@/app/actions/works";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type WorkMeta = {
   id: string;
   title: string;
   type: string;
   status: string;
+  publishMode: string | null;
+  snippet: string | null;
   coverImageId: string | null;
   coverImage: { id: string; label: string } | null;
   publishedAt: Date | null;
@@ -22,7 +32,9 @@ type ImageOption = { id: string; label: string; category: string };
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
-const fieldRow: React.CSSProperties = { display: "flex", flexDirection: "column", gap: "0.3rem" };
+const fieldRow: React.CSSProperties = {
+  display: "flex", flexDirection: "column", gap: "0.3rem",
+};
 const fieldLabel: React.CSSProperties = {
   fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em",
   textTransform: "uppercase", color: "var(--color-ink-muted)",
@@ -33,29 +45,25 @@ const inputStyle: React.CSSProperties = {
   fontFamily: "var(--font-heading)", fontSize: "1.1rem", outline: "none", width: "100%",
 };
 const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  fontFamily: "var(--font-body)", fontSize: "0.95rem",
+  ...inputStyle, fontFamily: "var(--font-body)", fontSize: "0.95rem",
+};
+const sectionLabel: React.CSSProperties = {
+  fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em",
+  textTransform: "uppercase", color: "var(--color-ink-muted)", marginBottom: "0.75rem",
 };
 
-// ── Action button (placeholder for future functionality) ──────────────────────
+// ── Action button ─────────────────────────────────────────────────────────────
 
 function ActionButton({
-  label,
-  sublabel,
-  disabled = false,
-  variant = "default",
-  onClick,
+  label, sublabel, disabled = false, variant = "default", onClick,
 }: {
-  label: string;
-  sublabel?: string;
-  disabled?: boolean;
-  variant?: "default" | "publish" | "danger";
-  onClick?: () => void;
+  label: string; sublabel?: string; disabled?: boolean;
+  variant?: "default" | "publish" | "danger"; onClick?: () => void;
 }) {
-  const colors: Record<string, { border: string; color: string; bg: string }> = {
+  const colors = {
     default: { border: "var(--color-border-light)", color: "var(--color-ink-muted)", bg: "transparent" },
     publish: { border: "var(--color-gold-dim)", color: "var(--color-gold)", bg: "rgba(201,168,76,0.06)" },
-    danger: { border: "var(--color-crimson-dim)", color: "#d4848e", bg: "transparent" },
+    danger:  { border: "var(--color-crimson-dim)", color: "#d4848e", bg: "transparent" },
   };
   const c = colors[variant];
 
@@ -65,12 +73,10 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       style={{
-        display: "flex", flexDirection: "column", alignItems: "flex-start",
-        gap: "0.15rem",
+        display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
         background: disabled ? "transparent" : c.bg,
         border: `1px solid ${disabled ? "var(--color-border)" : c.border}`,
-        borderRadius: "4px",
-        padding: "0.85rem 1.25rem",
+        borderRadius: "4px", padding: "0.85rem 1.25rem",
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.45 : 1,
         transition: "border-color 0.15s, opacity 0.15s",
@@ -95,6 +101,260 @@ function ActionButton({
   );
 }
 
+// ── Publishing section ────────────────────────────────────────────────────────
+
+function PublishingSection({ work }: { work: WorkMeta }) {
+  const isPublished = work.status === "published";
+  const [publishMode, setPublishMode] = useState<"whole" | "snippet">("whole");
+  const [snippetText, setSnippetText] = useState(work.snippet ?? "");
+  const [error, setError] = useState("");
+  const [publishPending, startPublish] = useTransition();
+  const [unpublishPending, startUnpublish] = useTransition();
+
+  function handlePublish() {
+    if (publishMode === "snippet" && !snippetText.trim()) {
+      setError("Enter snippet text before publishing.");
+      return;
+    }
+    setError("");
+    if (
+      !window.confirm(
+        `Publish "${work.title}" for others to read?\n\n` +
+          (publishMode === "whole"
+            ? "The full work will be visible publicly."
+            : "Your chosen snippet/teaser will be visible publicly.")
+      )
+    )
+      return;
+
+    startPublish(async () => {
+      const result = await publishWork(
+        work.id,
+        publishMode,
+        publishMode === "snippet" ? snippetText : undefined
+      );
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  function handleUnpublish() {
+    if (
+      !window.confirm(
+        `Unpublish "${work.title}"?\n\nIt will no longer be visible to readers.`
+      )
+    )
+      return;
+    startUnpublish(async () => {
+      const result = await unpublishWork(work.id);
+      if (result?.error) setError(result.error);
+    });
+  }
+
+  return (
+    <div>
+      <p style={sectionLabel}>Publishing</p>
+
+      {isPublished ? (
+        /* ── Published state ── */
+        <div>
+          <div
+            style={{
+              background: "rgba(201,168,76,0.06)",
+              border: "1px solid var(--color-gold-dim)",
+              borderLeft: "3px solid var(--color-gold)",
+              borderRadius: "4px",
+              padding: "1rem 1.25rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <p style={{
+              fontFamily: "var(--font-body)", fontSize: "0.82rem",
+              color: "var(--color-gold)", marginBottom: "0.2rem",
+            }}>
+              {work.publishMode === "snippet" ? "Snippet published" : "Full work published"}
+              {work.publishedAt && (
+                <span style={{ color: "var(--color-ink-faint)", marginLeft: "0.5rem" }}>
+                  · {work.publishedAt.toLocaleDateString("en-US", {
+                    month: "short", day: "numeric", year: "numeric",
+                  })}
+                </span>
+              )}
+            </p>
+            <p style={{
+              fontFamily: "var(--font-body)", fontSize: "0.82rem",
+              color: "var(--color-ink-muted)",
+            }}>
+              {work.openCount.toLocaleString()}{" "}
+              {work.openCount === 1 ? "read" : "reads"}
+            </p>
+            {work.publishMode === "snippet" && work.snippet && (
+              <details style={{ marginTop: "0.6rem" }}>
+                <summary style={{
+                  fontFamily: "var(--font-body)", fontSize: "0.75rem",
+                  color: "var(--color-ink-faint)", cursor: "pointer", letterSpacing: "0.04em",
+                }}>
+                  View published snippet
+                </summary>
+                <div
+                  style={{
+                    marginTop: "0.5rem", padding: "0.75rem",
+                    background: "var(--color-bg)", borderRadius: "3px",
+                    fontFamily: "var(--font-body)", fontSize: "0.85rem",
+                    color: "var(--color-ink-muted)", lineHeight: 1.7,
+                    maxHeight: "160px", overflowY: "auto",
+                    whiteSpace: "pre-wrap", wordBreak: "break-word",
+                  }}
+                >
+                  {work.snippet}
+                </div>
+              </details>
+            )}
+          </div>
+
+          {error && (
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginBottom: "0.75rem" }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handleUnpublish}
+            disabled={unpublishPending}
+            style={{
+              background: "transparent",
+              border: "1px solid var(--color-border-light)",
+              borderRadius: "3px", padding: "0.55rem 1.1rem",
+              color: "var(--color-ink-muted)",
+              fontFamily: "var(--font-body)", fontSize: "0.88rem",
+              cursor: unpublishPending ? "default" : "pointer",
+              opacity: unpublishPending ? 0.6 : 1,
+            }}
+          >
+            {unpublishPending ? "Unpublishing…" : "Unpublish — make private again"}
+          </button>
+        </div>
+      ) : (
+        /* ── Unpublished state ── */
+        <div
+          style={{
+            background: "var(--color-bg-elevated)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "4px",
+            padding: "1.25rem 1.5rem",
+          }}
+        >
+          {/* Mode selector */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.25rem" }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name={`pubmode-${work.id}`}
+                value="whole"
+                checked={publishMode === "whole"}
+                onChange={() => setPublishMode("whole")}
+                style={{ marginTop: "0.2rem", accentColor: "var(--color-gold)", flexShrink: 0 }}
+              />
+              <span>
+                <span style={{
+                  fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--color-ink)",
+                  display: "block",
+                }}>
+                  Publish the full work
+                </span>
+                <span style={{
+                  fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)",
+                  fontStyle: "italic",
+                }}>
+                  The entire written content becomes publicly readable.
+                </span>
+              </span>
+            </label>
+
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", cursor: "pointer" }}>
+              <input
+                type="radio"
+                name={`pubmode-${work.id}`}
+                value="snippet"
+                checked={publishMode === "snippet"}
+                onChange={() => setPublishMode("snippet")}
+                style={{ marginTop: "0.2rem", accentColor: "var(--color-gold)", flexShrink: 0 }}
+              />
+              <span>
+                <span style={{
+                  fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--color-ink)",
+                  display: "block",
+                }}>
+                  Publish a snippet / teaser only
+                </span>
+                <span style={{
+                  fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)",
+                  fontStyle: "italic",
+                }}>
+                  Only your chosen excerpt is public. The full content stays private.
+                </span>
+              </span>
+            </label>
+          </div>
+
+          {/* Snippet textarea — shown only when snippet mode selected */}
+          {publishMode === "snippet" && (
+            <div style={{ ...fieldRow, marginBottom: "1.25rem" }}>
+              <label style={fieldLabel}>Snippet text</label>
+              <textarea
+                value={snippetText}
+                onChange={(e) => setSnippetText(e.target.value)}
+                placeholder="Paste or write the excerpt you want readers to see publicly…"
+                rows={8}
+                style={{
+                  background: "var(--color-bg-surface)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "3px", padding: "0.7rem 0.9rem",
+                  color: "var(--color-ink)",
+                  fontFamily: "var(--font-body)", fontSize: "0.95rem",
+                  lineHeight: 1.75, outline: "none", width: "100%",
+                  resize: "vertical",
+                }}
+              />
+              <p style={{
+                fontFamily: "var(--font-body)", fontSize: "0.72rem",
+                color: "var(--color-ink-faint)", fontStyle: "italic",
+              }}>
+                Copy text from the editor and paste it here. Plain text only — formatting is stripped on display.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <p style={{
+              fontFamily: "var(--font-body)", fontSize: "0.85rem",
+              color: "#d4848e", marginBottom: "0.75rem",
+            }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={handlePublish}
+            disabled={publishPending}
+            style={{
+              background: publishPending ? "var(--color-border)" : "var(--color-gold)",
+              border: "none", borderRadius: "3px",
+              padding: "0.65rem 1.5rem",
+              color: publishPending ? "var(--color-ink-muted)" : "var(--color-bg)",
+              fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.06em",
+              cursor: publishPending ? "default" : "pointer",
+            }}
+          >
+            {publishPending ? "Publishing…" : "Publish →"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function WorkDetail({
@@ -110,7 +370,7 @@ export default function WorkDetail({
   const [deletePending, startDelete] = useTransition();
 
   const isBook = work.type === "book";
-  const isPublished = work.status === "published";
+  const typeLabel = isBook ? "Book" : "Short Story";
 
   function handleDelete() {
     if (
@@ -123,8 +383,6 @@ export default function WorkDetail({
       await deleteWork(work.id);
     });
   }
-
-  const typeLabel = isBook ? "Book" : "Short Story";
 
   return (
     <div style={{ maxWidth: "680px" }}>
@@ -151,7 +409,7 @@ export default function WorkDetail({
         </h2>
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", paddingTop: "0.3rem" }}>
           <TypeBadge type={work.type} />
-          <StatusBadge status={work.status} />
+          <StatusBadge status={work.status} publishMode={work.publishMode} />
         </div>
       </div>
       <p style={{
@@ -159,60 +417,36 @@ export default function WorkDetail({
         fontStyle: "italic", marginBottom: "2rem",
       }}>
         Created {work.createdAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
-        {isPublished && work.publishedAt && (
+        {work.status === "published" && work.publishedAt && (
           <> · Published {work.publishedAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</>
-        )}
-        {isPublished && (
-          <> · {work.openCount} {work.openCount === 1 ? "read" : "reads"}</>
         )}
       </p>
 
       {/* ── Action buttons ── */}
       <div style={{ marginBottom: "2.5rem" }}>
-        <p style={{
-          fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em",
-          textTransform: "uppercase", color: "var(--color-ink-muted)", marginBottom: "0.75rem",
-        }}>
-          Actions
-        </p>
+        <p style={sectionLabel}>Actions</p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          {/* "Open in Editor" — now live */}
           <Link
             href={`/admin/works/${work.id}/editor`}
             style={{
-              display: "flex", flexDirection: "column", alignItems: "flex-start",
-              gap: "0.15rem",
+              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
               background: "rgba(201,168,76,0.06)",
               border: "1px solid var(--color-gold-dim)",
-              borderRadius: "4px",
-              padding: "0.85rem 1.25rem",
-              textDecoration: "none",
-              minWidth: "160px",
+              borderRadius: "4px", padding: "0.85rem 1.25rem",
+              textDecoration: "none", minWidth: "160px",
               transition: "border-color 0.15s",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold)")}
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
           >
-            <span style={{
-              fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em",
-              color: "var(--color-gold)",
-            }}>
+            <span style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em", color: "var(--color-gold)" }}>
               Open in Editor
             </span>
-            <span style={{
-              fontFamily: "var(--font-body)", fontSize: "0.72rem",
-              color: "var(--color-ink-faint)", fontStyle: "italic",
-            }}>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
               Write and edit content
             </span>
           </Link>
 
-          <ActionButton
-            label={isPublished ? "Unpublish" : "Publish"}
-            sublabel={isPublished ? "Make private again" : "Share with readers"}
-            variant="publish"
-            disabled
-          />
           <ActionButton
             label="Backup / Download"
             sublabel="Export as JSON or Word"
@@ -220,12 +454,13 @@ export default function WorkDetail({
             disabled
           />
         </div>
-        <p style={{
-          fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)",
-          fontStyle: "italic", marginTop: "0.6rem",
-        }}>
-          Publishing and backup features are coming in later stages.
-        </p>
+      </div>
+
+      <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+
+      {/* ── Publishing section ── */}
+      <div style={{ marginBottom: "2rem" }}>
+        <PublishingSection work={work} />
       </div>
 
       <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
@@ -236,16 +471,11 @@ export default function WorkDetail({
         <div style={fieldRow}>
           <label htmlFor="title" style={fieldLabel}>{typeLabel} Title</label>
           <input
-            id="title"
-            name="title"
-            type="text"
-            defaultValue={work.title}
-            required
-            style={inputStyle}
+            id="title" name="title" type="text"
+            defaultValue={work.title} required style={inputStyle}
           />
         </div>
 
-        {/* Status messages */}
         {renameState?.error && (
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.5rem" }}>
             {renameState.error}
@@ -258,8 +488,7 @@ export default function WorkDetail({
         )}
 
         <button
-          type="submit"
-          disabled={renamePending}
+          type="submit" disabled={renamePending}
           style={{
             marginTop: "0.85rem",
             background: renamePending ? "var(--color-border)" : "var(--color-crimson)",
@@ -282,20 +511,12 @@ export default function WorkDetail({
             <div style={fieldRow}>
               <label htmlFor="coverImageId" style={fieldLabel}>Cover Image</label>
               {availableImages.length === 0 ? (
-                <p style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)",
-                  fontStyle: "italic",
-                }}>
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
                   No images uploaded yet. Upload images via the sidebar Images tool to assign a cover.
                 </p>
               ) : (
                 <>
-                  <select
-                    id="coverImageId"
-                    name="coverImageId"
-                    defaultValue={work.coverImageId ?? ""}
-                    style={selectStyle}
-                  >
+                  <select id="coverImageId" name="coverImageId" defaultValue={work.coverImageId ?? ""} style={selectStyle}>
                     <option value="">— No cover image —</option>
                     {availableImages.map((img) => (
                       <option key={img.id} value={img.id} style={{ background: "var(--color-bg-elevated)" }}>
@@ -304,18 +525,11 @@ export default function WorkDetail({
                     ))}
                   </select>
 
-                  {/* Preview current cover if set */}
                   {work.coverImage && (
-                    <div style={{
-                      marginTop: "0.75rem", borderRadius: "3px", overflow: "hidden",
-                      border: "1px solid var(--color-border)", maxWidth: "200px",
-                    }}>
+                    <div style={{ marginTop: "0.75rem", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--color-border)", maxWidth: "200px" }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`/api/images/${work.coverImage.id}`}
-                        alt={work.coverImage.label}
-                        style={{ display: "block", width: "100%", height: "auto" }}
-                      />
+                      <img src={`/api/images/${work.coverImage.id}`} alt={work.coverImage.label}
+                        style={{ display: "block", width: "100%", height: "auto" }} />
                     </div>
                   )}
 
@@ -331,8 +545,7 @@ export default function WorkDetail({
                   )}
 
                   <button
-                    type="submit"
-                    disabled={coverPending}
+                    type="submit" disabled={coverPending}
                     style={{
                       marginTop: "0.75rem",
                       background: coverPending ? "var(--color-border)" : "var(--color-crimson)",
@@ -359,9 +572,7 @@ export default function WorkDetail({
           Danger Zone
         </p>
         <button
-          type="button"
-          onClick={handleDelete}
-          disabled={deletePending}
+          type="button" onClick={handleDelete} disabled={deletePending}
           style={{
             background: "transparent",
             border: "1px solid var(--color-crimson-dim)",
@@ -377,32 +588,46 @@ export default function WorkDetail({
   );
 }
 
-// ── Small badge components ─────────────────────────────────────────────────────
+// ── Badge components ──────────────────────────────────────────────────────────
 
 function TypeBadge({ type }: { type: string }) {
   return (
     <span style={{
       fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
       textTransform: "uppercase", color: "var(--color-ink-muted)",
-      border: "1px solid var(--color-border)", borderRadius: "2px",
-      padding: "0.1rem 0.45rem",
+      border: "1px solid var(--color-border)", borderRadius: "2px", padding: "0.1rem 0.45rem",
     }}>
       {type}
     </span>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const published = status === "published";
+function StatusBadge({
+  status,
+  publishMode,
+}: {
+  status: string;
+  publishMode: string | null;
+}) {
+  if (status !== "published") {
+    return (
+      <span style={{
+        fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
+        textTransform: "uppercase", color: "var(--color-ink-faint)",
+        border: "1px solid var(--color-border)", borderRadius: "2px", padding: "0.1rem 0.45rem",
+      }}>
+        Private
+      </span>
+    );
+  }
+  const label = publishMode === "snippet" ? "Snippet" : "Published";
   return (
     <span style={{
       fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
-      textTransform: "uppercase",
-      color: published ? "var(--color-gold)" : "var(--color-ink-faint)",
-      border: `1px solid ${published ? "var(--color-gold-dim)" : "var(--color-border)"}`,
-      borderRadius: "2px", padding: "0.1rem 0.45rem",
+      textTransform: "uppercase", color: "var(--color-gold)",
+      border: "1px solid var(--color-gold-dim)", borderRadius: "2px", padding: "0.1rem 0.45rem",
     }}>
-      {published ? "Published" : "Private"}
+      {label}
     </span>
   );
 }

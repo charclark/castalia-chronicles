@@ -89,6 +89,64 @@ export async function saveWorkContent(
   return {};
 }
 
+export async function publishWork(
+  id: string,
+  mode: "whole" | "snippet",
+  snippet?: string
+): Promise<{ error?: string }> {
+  await auth();
+  const universeId = await getCurrentUniverseId();
+  const existing = await prisma.work.findFirst({ where: { id, universeId } });
+  if (!existing) return { error: "Work not found." };
+
+  if (mode === "snippet" && !snippet?.trim()) {
+    return { error: "Snippet text is required when publishing a teaser." };
+  }
+
+  await prisma.work.update({
+    where: { id },
+    data: {
+      status: "published",
+      publishMode: mode,
+      snippet: mode === "snippet" ? snippet!.trim() : null,
+      // Preserve original publishedAt if re-publishing after unpublishing
+      publishedAt: existing.publishedAt ?? new Date(),
+    },
+  });
+
+  revalidatePath(`/admin/works/${id}`);
+  revalidatePath("/admin/works");
+  revalidatePath("/admin", "layout");
+  return {};
+}
+
+export async function unpublishWork(id: string): Promise<{ error?: string }> {
+  await auth();
+  const universeId = await getCurrentUniverseId();
+  const existing = await prisma.work.findFirst({ where: { id, universeId } });
+  if (!existing) return { error: "Work not found." };
+
+  await prisma.work.update({
+    where: { id },
+    data: { status: "private", publishMode: null, snippet: null },
+  });
+
+  revalidatePath(`/admin/works/${id}`);
+  revalidatePath("/admin/works");
+  revalidatePath("/admin", "layout");
+  return {};
+}
+
+// Called by public reader pages — no admin auth required.
+// Only increments when the work is actually published (safe: count only,
+// no sensitive data exposed).
+export async function incrementOpenCount(id: string): Promise<void> {
+  await prisma.work.updateMany({
+    where: { id, status: "published" },
+    data: { openCount: { increment: 1 } },
+  });
+}
+
 export async function deleteWork(id: string): Promise<void> {
   await auth();
   const universeId = await getCurrentUniverseId();

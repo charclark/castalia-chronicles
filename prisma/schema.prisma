@@ -192,10 +192,14 @@ model PlotItem {
 // --- Works (Books and Short Stories) ---
 // type: "book" | "short story"
 // status: "private" | "published"
+// publishMode: null (private) | "whole" | "snippet"
+//   "whole"   — the full content field is public
+//   "snippet" — only the snippet field is public; content stays private
+// snippet: HTML text chosen by the author as a public teaser (set when publishMode="snippet")
 // content: rich text stored as HTML (populated by TipTap editor, next stage)
 // coverImageId: optional reference to an Image in the same universe (books only)
 // openCount: incremented each time a public visitor opens the work (read-tracking)
-// publishedAt: set when status changes to "published"
+// publishedAt: set when status first changes to "published"
 model Work {
   id           String    @id @default(cuid())
   universeId   String
@@ -204,6 +208,8 @@ model Work {
   type         String    // "book" | "short story"
   content      String?   // TipTap HTML; null until first save in editor
   status       String    @default("private")
+  publishMode  String?   // "whole" | "snippet" | null
+  snippet      String?   // public teaser text/HTML when publishMode="snippet"
   coverImageId String?
   coverImage   Image?    @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
   publishedAt  DateTime?
