@@ -9,9 +9,13 @@ import {
   deleteWork,
   publishWork,
   unpublishWork,
+  saveWorkDescription,
+  saveBuyLinks,
 } from "@/app/actions/works";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type BuyLink = { label: string; url: string };
 
 type WorkMeta = {
   id: string;
@@ -22,6 +26,8 @@ type WorkMeta = {
   snippet: string | null;
   coverImageId: string | null;
   coverImage: { id: string; label: string } | null;
+  description: string | null;
+  buyLinks: string | null;
   publishedAt: Date | null;
   openCount: number;
   createdAt: Date;
@@ -112,14 +118,15 @@ function PublishingSection({ work }: { work: WorkMeta }) {
   const [unpublishPending, startUnpublish] = useTransition();
 
   function handlePublish() {
-    if (publishMode === "snippet" && !snippetText.trim()) {
-      setError("Enter snippet text before publishing.");
+    // Snippet must come from either the textarea or a previously saved snippet
+    if (publishMode === "snippet" && !snippetText.trim() && !work.snippet) {
+      setError("Enter snippet text, or open the editor, select text, and click 'Set as Snippet'.");
       return;
     }
     setError("");
     if (
       !window.confirm(
-        `Publish "${work.title}" for others to read?\n\n` +
+        `Are you sure you want to publish "${work.title}" for others to read?\n\n` +
           (publishMode === "whole"
             ? "The full work will be visible publicly."
             : "Your chosen snippet/teaser will be visible publicly.")
@@ -131,6 +138,7 @@ function PublishingSection({ work }: { work: WorkMeta }) {
       const result = await publishWork(
         work.id,
         publishMode,
+        // Pass textarea text if edited; server will fall back to saved snippet if empty
         publishMode === "snippet" ? snippetText : undefined
       );
       if (result?.error) setError(result.error);
@@ -300,11 +308,21 @@ function PublishingSection({ work }: { work: WorkMeta }) {
           {/* Snippet textarea — shown only when snippet mode selected */}
           {publishMode === "snippet" && (
             <div style={{ ...fieldRow, marginBottom: "1.25rem" }}>
-              <label style={fieldLabel}>Snippet text</label>
+              <label style={fieldLabel}>
+                Snippet text
+                {work.snippet && (
+                  <span style={{
+                    textTransform: "none", fontStyle: "italic", letterSpacing: 0,
+                    fontSize: "0.72rem", color: "var(--color-gold)", marginLeft: "0.5rem",
+                  }}>
+                    — saved from editor ({work.snippet.length} chars)
+                  </span>
+                )}
+              </label>
               <textarea
                 value={snippetText}
                 onChange={(e) => setSnippetText(e.target.value)}
-                placeholder="Paste or write the excerpt you want readers to see publicly…"
+                placeholder="Select text in the editor and click 'Set as Snippet', or paste directly here…"
                 rows={8}
                 style={{
                   background: "var(--color-bg-surface)",
@@ -320,7 +338,8 @@ function PublishingSection({ work }: { work: WorkMeta }) {
                 fontFamily: "var(--font-body)", fontSize: "0.72rem",
                 color: "var(--color-ink-faint)", fontStyle: "italic",
               }}>
-                Copy text from the editor and paste it here. Plain text only — formatting is stripped on display.
+                In the editor, select text then click "Set as Snippet" to save it here automatically.
+                Or paste/type directly above.
               </p>
             </div>
           )}
@@ -351,6 +370,200 @@ function PublishingSection({ work }: { work: WorkMeta }) {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Description editor ────────────────────────────────────────────────────────
+
+function DescriptionEditor({ work }: { work: WorkMeta }) {
+  const [text, setText] = useState(work.description ?? "");
+  const [saving, startSave] = useTransition();
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  function handleSave() {
+    setSaved(false);
+    setError("");
+    startSave(async () => {
+      const result = await saveWorkDescription(work.id, text);
+      if (result?.error) setError(result.error);
+      else setSaved(true);
+    });
+  }
+
+  return (
+    <div>
+      <p style={sectionLabel}>Description</p>
+      <textarea
+        value={text}
+        onChange={(e) => { setText(e.target.value); setSaved(false); }}
+        placeholder="Short synopsis visible to readers on the public books page…"
+        rows={5}
+        style={{
+          background: "var(--color-bg-surface)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "3px", padding: "0.7rem 0.9rem",
+          color: "var(--color-ink)",
+          fontFamily: "var(--font-body)", fontSize: "0.95rem",
+          lineHeight: 1.75, outline: "none", width: "100%",
+          resize: "vertical",
+        }}
+      />
+      {error && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.4rem" }}>
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d", marginTop: "0.4rem" }}>
+          Description saved.
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        style={{
+          marginTop: "0.75rem",
+          background: saving ? "var(--color-border)" : "var(--color-crimson)",
+          border: "none", borderRadius: "3px",
+          padding: "0.6rem 1.25rem", color: "var(--color-ink)",
+          fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em",
+          cursor: saving ? "default" : "pointer",
+        }}
+      >
+        {saving ? "Saving…" : "Save Description"}
+      </button>
+    </div>
+  );
+}
+
+// ── Buy links editor ──────────────────────────────────────────────────────────
+
+function BuyLinksEditor({ work }: { work: WorkMeta }) {
+  const parsedLinks: BuyLink[] = (() => {
+    try { return work.buyLinks ? JSON.parse(work.buyLinks) : []; }
+    catch { return []; }
+  })();
+
+  const [links, setLinks] = useState<BuyLink[]>(parsedLinks);
+  const [saving, startSave] = useTransition();
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  function addLink() {
+    setLinks((prev) => [...prev, { label: "", url: "" }]);
+    setSaved(false);
+  }
+
+  function removeLink(i: number) {
+    setLinks((prev) => prev.filter((_, idx) => idx !== i));
+    setSaved(false);
+  }
+
+  function updateLink(i: number, field: "label" | "url", value: string) {
+    setLinks((prev) => prev.map((l, idx) => idx === i ? { ...l, [field]: value } : l));
+    setSaved(false);
+  }
+
+  function handleSave() {
+    const clean = links.filter((l) => l.label.trim() && l.url.trim());
+    setSaved(false);
+    setError("");
+    startSave(async () => {
+      const result = await saveBuyLinks(work.id, clean.length ? JSON.stringify(clean) : "");
+      if (result?.error) setError(result.error);
+      else { setLinks(clean); setSaved(true); }
+    });
+  }
+
+  return (
+    <div>
+      <p style={sectionLabel}>Buy Links</p>
+      <p style={{
+        fontFamily: "var(--font-body)", fontSize: "0.78rem",
+        color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "0.75rem",
+      }}>
+        Add links to where readers can buy this book (e.g. Amazon, Kobo, your own store).
+      </p>
+
+      {links.map((link, i) => (
+        <div key={i} style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem", flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="Label (e.g. Amazon)"
+            value={link.label}
+            onChange={(e) => updateLink(i, "label", e.target.value)}
+            style={{ ...inputStyle, flex: "0 0 160px", fontSize: "0.92rem" }}
+          />
+          <input
+            type="url"
+            placeholder="https://…"
+            value={link.url}
+            onChange={(e) => updateLink(i, "url", e.target.value)}
+            style={{ ...inputStyle, flex: "1 1 220px", fontSize: "0.92rem" }}
+          />
+          <button
+            type="button"
+            onClick={() => removeLink(i)}
+            style={{
+              background: "transparent",
+              border: "1px solid var(--color-crimson-dim)",
+              borderRadius: "3px", padding: "0.55rem 0.75rem",
+              color: "#d4848e",
+              fontFamily: "var(--font-body)", fontSize: "0.82rem",
+              cursor: "pointer",
+            }}
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+
+      <button
+        type="button"
+        onClick={addLink}
+        style={{
+          marginTop: "0.25rem",
+          background: "transparent",
+          border: "1px solid var(--color-border-light)",
+          borderRadius: "3px", padding: "0.5rem 1rem",
+          color: "var(--color-ink-muted)",
+          fontFamily: "var(--font-body)", fontSize: "0.85rem",
+          cursor: "pointer",
+        }}
+      >
+        + Add link
+      </button>
+
+      {error && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.5rem" }}>
+          {error}
+        </p>
+      )}
+      {saved && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d", marginTop: "0.5rem" }}>
+          Buy links saved.
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={saving}
+        style={{
+          display: "block",
+          marginTop: "0.75rem",
+          background: saving ? "var(--color-border)" : "var(--color-crimson)",
+          border: "none", borderRadius: "3px",
+          padding: "0.6rem 1.25rem", color: "var(--color-ink)",
+          fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em",
+          cursor: saving ? "default" : "pointer",
+        }}
+      >
+        {saving ? "Saving…" : "Save Buy Links"}
+      </button>
     </div>
   );
 }
@@ -561,6 +774,20 @@ export default function WorkDetail({
               )}
             </div>
           </form>
+        </>
+      )}
+
+      {/* ── Description & Buy Links (books only) ── */}
+      {isBook && (
+        <>
+          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+          <div style={{ marginBottom: "2rem" }}>
+            <DescriptionEditor work={work} />
+          </div>
+          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+          <div style={{ marginBottom: "2rem" }}>
+            <BuyLinksEditor work={work} />
+          </div>
         </>
       )}
 

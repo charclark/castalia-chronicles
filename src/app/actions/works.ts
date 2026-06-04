@@ -99,7 +99,9 @@ export async function publishWork(
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
 
-  if (mode === "snippet" && !snippet?.trim()) {
+  // When publishing as snippet, require snippet text either from param or already saved
+  const resolvedSnippet = snippet?.trim() || existing.snippet;
+  if (mode === "snippet" && !resolvedSnippet) {
     return { error: "Snippet text is required when publishing a teaser." };
   }
 
@@ -108,7 +110,8 @@ export async function publishWork(
     data: {
       status: "published",
       publishMode: mode,
-      snippet: mode === "snippet" ? snippet!.trim() : null,
+      // Only update snippet field when publishing as snippet — never wipe it when publishing whole
+      ...(mode === "snippet" ? { snippet: resolvedSnippet } : {}),
       // Preserve original publishedAt if re-publishing after unpublishing
       publishedAt: existing.publishedAt ?? new Date(),
     },
@@ -126,14 +129,63 @@ export async function unpublishWork(id: string): Promise<{ error?: string }> {
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
 
+  // Keep snippet intact — author may re-publish as snippet without re-entering it
   await prisma.work.update({
     where: { id },
-    data: { status: "private", publishMode: null, snippet: null },
+    data: { status: "private", publishMode: null },
   });
 
   revalidatePath(`/admin/works/${id}`);
   revalidatePath("/admin/works");
   revalidatePath("/admin", "layout");
+  return {};
+}
+
+// Save snippet text independently of publishing — used by the editor "Set as Snippet" button.
+export async function updateSnippet(
+  id: string,
+  snippetText: string
+): Promise<{ error?: string }> {
+  await auth();
+  const universeId = await getCurrentUniverseId();
+  const existing = await prisma.work.findFirst({ where: { id, universeId } });
+  if (!existing) return { error: "Work not found." };
+
+  await prisma.work.update({
+    where: { id },
+    data: { snippet: snippetText.trim() || null },
+  });
+
+  revalidatePath(`/admin/works/${id}`);
+  return {};
+}
+
+export async function saveWorkDescription(
+  id: string,
+  description: string
+): Promise<{ error?: string }> {
+  await auth();
+  const universeId = await getCurrentUniverseId();
+  const existing = await prisma.work.findFirst({ where: { id, universeId } });
+  if (!existing) return { error: "Work not found." };
+  await prisma.work.update({ where: { id }, data: { description: description.trim() || null } });
+  revalidatePath(`/admin/works/${id}`);
+  revalidatePath("/books");
+  revalidatePath("/free-read");
+  return {};
+}
+
+export async function saveBuyLinks(
+  id: string,
+  buyLinksJson: string
+): Promise<{ error?: string }> {
+  await auth();
+  const universeId = await getCurrentUniverseId();
+  const existing = await prisma.work.findFirst({ where: { id, universeId } });
+  if (!existing) return { error: "Work not found." };
+  await prisma.work.update({ where: { id }, data: { buyLinks: buyLinksJson || null } });
+  revalidatePath(`/admin/works/${id}`);
+  revalidatePath("/books");
   return {};
 }
 

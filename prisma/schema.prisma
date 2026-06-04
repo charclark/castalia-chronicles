@@ -189,6 +189,17 @@ model PlotItem {
   @@index([universeId])
 }
 
+// --- Site Settings ---
+// Singleton record (id = "singleton") storing site-wide public settings.
+// bio: author biography, plain text (paragraphs split by \n\n).
+// photoData: compressed JPEG bytes for the author photo, served via /api/site/photo.
+model SiteSettings {
+  id        String   @id @default("singleton")
+  bio       String?
+  photoData Bytes?
+  updatedAt DateTime @updatedAt
+}
+
 // --- Works (Books and Short Stories) ---
 // type: "book" | "short story"
 // status: "private" | "published"
@@ -212,6 +223,8 @@ model Work {
   snippet      String?   // public teaser text/HTML when publishMode="snippet"
   coverImageId String?
   coverImage   Image?    @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+  description  String?   // Short synopsis for public book/story listing
+  buyLinks     String?   // JSON: [{label: string, url: string}[]]
   publishedAt  DateTime?
   openCount    Int       @default(0)
   createdAt    DateTime  @default(now())

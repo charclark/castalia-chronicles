@@ -25,6 +25,8 @@ export default async function WorkPage({
       snippet: true,
       coverImageId: true,
       coverImage: { select: { id: true, label: true } },
+      description: true,
+      buyLinks: true,
       publishedAt: true,
       openCount: true,
       createdAt: true,
