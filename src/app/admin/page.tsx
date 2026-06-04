@@ -133,42 +133,51 @@ export default async function AdminDashboard() {
         }}
       >
         {[
-          { label: "Characters", note: "Coming soon", href: "#" },
-          { label: "Locations", note: "Coming soon", href: "#" },
-          { label: "Writing", note: "Coming soon", href: "#" },
-          { label: "Feedback", note: "Coming soon", href: "#" },
-        ].map(({ label, note, href }) => (
-          <div
-            key={label}
-            style={{
-              background: "var(--color-bg-elevated)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "4px",
-              padding: "1.25rem",
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: "var(--font-heading)",
-                fontSize: "1.2rem",
-                fontWeight: 400,
-                color: "var(--color-ink)",
-                marginBottom: "0.3rem",
-              }}
-            >
-              {label}
-            </h3>
-            <p
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.85rem",
-                color: "var(--color-ink-faint)",
-              }}
-            >
-              {note}
-            </p>
-          </div>
-        ))}
+          { label: "Characters", note: "Coming soon", href: "" },
+          { label: "Locations", note: "Coming soon", href: "" },
+          { label: "Writing", note: "Books & short stories", href: "/admin/works" },
+          { label: "Feedback", note: "Coming soon", href: "" },
+        ].map(({ label, note, href }) => {
+          const cardStyle: React.CSSProperties = {
+            display: "block",
+            background: "var(--color-bg-elevated)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "4px",
+            padding: "1.25rem",
+            textDecoration: "none",
+          };
+          const inner = (
+            <>
+              <h3
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "1.2rem",
+                  fontWeight: 400,
+                  color: "var(--color-ink)",
+                  marginBottom: "0.3rem",
+                }}
+              >
+                {label}
+              </h3>
+              <p
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.85rem",
+                  color: "var(--color-ink-faint)",
+                }}
+              >
+                {note}
+              </p>
+            </>
+          );
+          return href ? (
+            <Link key={label} href={href} style={cardStyle}>
+              {inner}
+            </Link>
+          ) : (
+            <div key={label} style={cardStyle}>{inner}</div>
+          );
+        })}
       </div>
     </div>
   );

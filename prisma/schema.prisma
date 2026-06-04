@@ -36,6 +36,7 @@ model Universe {
   characters     Character[]
   locations      Location[]
   images         Image[]
+  works          Work[]
 }
 
 // --- Characters ---
@@ -167,6 +168,7 @@ model Image {
   category   String   @default("other")
   mimeType   String   @default("image/jpeg")
   data       Bytes
+  works      Work[]   // books that use this as cover art
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -185,4 +187,30 @@ model PlotItem {
   updatedAt  DateTime @updatedAt
 
   @@index([universeId])
+}
+
+// --- Works (Books and Short Stories) ---
+// type: "book" | "short story"
+// status: "private" | "published"
+// content: rich text stored as HTML (populated by TipTap editor, next stage)
+// coverImageId: optional reference to an Image in the same universe (books only)
+// openCount: incremented each time a public visitor opens the work (read-tracking)
+// publishedAt: set when status changes to "published"
+model Work {
+  id           String    @id @default(cuid())
+  universeId   String
+  universe     Universe  @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  title        String
+  type         String    // "book" | "short story"
+  content      String?   // TipTap HTML; null until first save in editor
+  status       String    @default("private")
+  coverImageId String?
+  coverImage   Image?    @relation(fields: [coverImageId], references: [id], onDelete: SetNull)
+  publishedAt  DateTime?
+  openCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([universeId])
+  @@index([coverImageId])
 }
