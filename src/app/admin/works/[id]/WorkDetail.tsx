@@ -2,6 +2,7 @@
 
 import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { renameWork, setCoverImage, deleteWork } from "@/app/actions/works";
 
 type WorkMeta = {
@@ -175,12 +176,37 @@ export default function WorkDetail({
           Actions
         </p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <ActionButton
-            label="Open in Editor"
-            sublabel="Write and edit content"
-            variant="default"
-            disabled
-          />
+          {/* "Open in Editor" — now live */}
+          <Link
+            href={`/admin/works/${work.id}/editor`}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "flex-start",
+              gap: "0.15rem",
+              background: "rgba(201,168,76,0.06)",
+              border: "1px solid var(--color-gold-dim)",
+              borderRadius: "4px",
+              padding: "0.85rem 1.25rem",
+              textDecoration: "none",
+              minWidth: "160px",
+              transition: "border-color 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
+          >
+            <span style={{
+              fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em",
+              color: "var(--color-gold)",
+            }}>
+              Open in Editor
+            </span>
+            <span style={{
+              fontFamily: "var(--font-body)", fontSize: "0.72rem",
+              color: "var(--color-ink-faint)", fontStyle: "italic",
+            }}>
+              Write and edit content
+            </span>
+          </Link>
+
           <ActionButton
             label={isPublished ? "Unpublish" : "Publish"}
             sublabel={isPublished ? "Make private again" : "Share with readers"}
@@ -198,7 +224,7 @@ export default function WorkDetail({
           fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)",
           fontStyle: "italic", marginTop: "0.6rem",
         }}>
-          Editor, publishing, and backup features are coming in the next stages.
+          Publishing and backup features are coming in later stages.
         </p>
       </div>
 

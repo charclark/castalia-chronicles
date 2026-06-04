@@ -102,3 +102,89 @@ a:hover { color: var(--color-gold-dim); }
   background-color: var(--color-gold);
   color: var(--color-bg);
 }
+
+/* ── TipTap Writing Editor ──────────────────────────────────────────────── */
+.tiptap-writing-area {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  line-height: 1.85;
+  color: var(--color-ink);
+  outline: none;
+  caret-color: var(--color-gold);
+}
+
+/* Remove TipTap default focus outline */
+.tiptap-writing-area:focus,
+.tiptap-writing-area .tiptap:focus {
+  outline: none;
+}
+
+.tiptap-writing-area .tiptap {
+  outline: none;
+  min-height: 60vh;
+  padding-bottom: 8rem;
+}
+
+.tiptap-writing-area .tiptap p {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  line-height: 1.85;
+  margin-bottom: 1.1em;
+}
+
+.tiptap-writing-area .tiptap p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap-writing-area .tiptap h1 {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: 0.04em;
+  margin-top: 2rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.2;
+}
+
+.tiptap-writing-area .tiptap h2 {
+  font-family: var(--font-heading);
+  font-size: 1.7rem;
+  font-weight: 400;
+  color: var(--color-ink);
+  letter-spacing: 0.03em;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
+}
+
+.tiptap-writing-area .tiptap h3 {
+  font-family: var(--font-heading);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--color-ink-muted);
+  letter-spacing: 0.05em;
+  margin-top: 1.5rem;
+  margin-bottom: 0.4rem;
+  line-height: 1.3;
+}
+
+.tiptap-writing-area .tiptap strong {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.tiptap-writing-area .tiptap em {
+  font-style: italic;
+  color: var(--color-ink-muted);
+}
+
+/* Placeholder text */
+.tiptap-writing-area .tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--color-ink-faint);
+  font-style: italic;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}

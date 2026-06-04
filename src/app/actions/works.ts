@@ -77,6 +77,18 @@ export async function setCoverImage(
   return { success: "Cover updated." };
 }
 
+export async function saveWorkContent(
+  id: string,
+  content: string
+): Promise<{ error?: string }> {
+  await auth();
+  const universeId = await getCurrentUniverseId();
+  const existing = await prisma.work.findFirst({ where: { id, universeId } });
+  if (!existing) return { error: "Work not found." };
+  await prisma.work.update({ where: { id }, data: { content } });
+  return {};
+}
+
 export async function deleteWork(id: string): Promise<void> {
   await auth();
   const universeId = await getCurrentUniverseId();
