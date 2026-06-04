@@ -200,6 +200,28 @@ model SiteSettings {
   updatedAt DateTime @updatedAt
 }
 
+// --- Feedback Messages ---
+// Submitted by public visitors via the Feedback popup.
+// read: false = unread/new; true = admin has handled it.
+model FeedbackMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// --- Mailing List ---
+// Email addresses collected via the public Subscribe popup.
+// email is unique so duplicates are detected and rejected gracefully.
+model MailingListEntry {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+}
+
 // --- Works (Books and Short Stories) ---
 // type: "book" | "short story"
 // status: "private" | "published"
