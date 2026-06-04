@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 type Entry = { id: string; title: string };
 type CharEntry = { id: string; name: string };
 type LocEntry = { id: string; name: string };
+type ImgEntry = { id: string; label: string };
 type PlotEntry = { id: string; text: string; checked: boolean };
 
 export type SidebarData = {
@@ -16,6 +17,7 @@ export type SidebarData = {
   plotItems: PlotEntry[];
   characters: CharEntry[];
   locations: LocEntry[];
+  images: ImgEntry[];
 };
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -281,7 +283,7 @@ function PlotChecklistTool({
 
 // ── Main sidebar ─────────────────────────────────────────────────────────────
 
-export default function SidebarClient({ universeId, ideas, notes, plotItems, characters, locations }: SidebarData) {
+export default function SidebarClient({ universeId, ideas, notes, plotItems, characters, locations, images }: SidebarData) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -379,8 +381,13 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
       {/* Divider */}
       <div style={{ height: "1px", background: "var(--color-border)", margin: "0.5rem 0.75rem" }} />
 
-      {/* Images — placeholder */}
-      <SidebarTool label="Images" isPlaceholder />
+      {/* Images */}
+      <SidebarTool
+        label="Images"
+        entries={images.map((i) => ({ id: i.id, title: i.label }))}
+        onWordClick={() => openPopup("images")}
+        entryHref={(id) => `/admin/images/${id}`}
+      />
     </aside>
   );
 }

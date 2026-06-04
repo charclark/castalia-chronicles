@@ -29,7 +29,7 @@ export default async function AdminLayout({
       : (universes[0]?.id ?? null);
 
   // Sidebar data — scoped to current universe
-  const [ideas, notes, plotItems, characters, locations] = currentUniverseId
+  const [ideas, notes, plotItems, characters, locations, images] = currentUniverseId
     ? await Promise.all([
         prisma.storylineIdea.findMany({
           where: { universeId: currentUniverseId },
@@ -56,8 +56,14 @@ export default async function AdminLayout({
           orderBy: { name: "asc" },
           select: { id: true, name: true, locatedIn: true, atmosphere: true, createdAt: true },
         }),
+        // Fetch image metadata only — binary data is served via /api/images/[id]
+        prisma.image.findMany({
+          where: { universeId: currentUniverseId },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, label: true, category: true, createdAt: true },
+        }),
       ])
-    : [[], [], [], [], []];
+    : [[], [], [], [], [], []];
 
   return (
     <div
@@ -82,6 +88,7 @@ export default async function AdminLayout({
           plotItems={plotItems}
           characters={characters}
           locations={locations}
+          images={images}
         />
         <main
           style={{
@@ -101,6 +108,7 @@ export default async function AdminLayout({
           notes={notes}
           characters={characters}
           locations={locations}
+          images={images}
           universeId={currentUniverseId}
         />
       </Suspense>

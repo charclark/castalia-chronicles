@@ -28,6 +28,13 @@ type LocationEntry = {
   createdAt: Date;
 };
 
+type ImageEntry = {
+  id: string;
+  label: string;
+  category: string;
+  createdAt: Date;
+};
+
 // ── Shared card components ───────────────────────────────────────────────────
 
 function TextCard({ entry, href }: { entry: TextEntry; href: string }) {
@@ -149,6 +156,58 @@ function CharacterCard({ char, href }: { char: CharacterEntry; href: string }) {
   );
 }
 
+function ImageGalleryCard({ img, href }: { img: ImageEntry; href: string }) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "block",
+        background: "var(--color-bg-surface)",
+        border: "1px solid var(--color-border)",
+        borderRadius: "4px",
+        overflow: "hidden",
+        textDecoration: "none",
+        transition: "border-color 0.15s",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
+    >
+      {/* Thumbnail — fixed-aspect container */}
+      <div style={{ width: "100%", paddingBottom: "66%", position: "relative", overflow: "hidden", background: "var(--color-bg)" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={`/api/images/${img.id}`}
+          alt={img.label}
+          style={{
+            position: "absolute", inset: 0,
+            width: "100%", height: "100%",
+            objectFit: "cover",
+          }}
+        />
+      </div>
+      <div style={{ padding: "0.75rem 1rem" }}>
+        <p style={{
+          fontFamily: "var(--font-body)", fontSize: "0.9rem",
+          color: "var(--color-ink)", marginBottom: "0.25rem",
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
+          {img.label}
+        </p>
+        {img.category !== "other" && (
+          <span style={{
+            fontFamily: "var(--font-body)", fontSize: "0.68rem",
+            letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "var(--color-gold)", border: "1px solid var(--color-gold-dim)",
+            borderRadius: "2px", padding: "0.1rem 0.4rem",
+          }}>
+            {img.category}
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+}
+
 function LocationCard({ loc, href }: { loc: LocationEntry; href: string }) {
   return (
     <Link
@@ -223,12 +282,14 @@ export default function PopupLayer({
   notes,
   characters,
   locations,
+  images,
   universeId,
 }: {
   ideas: TextEntry[];
   notes: TextEntry[];
   characters: CharacterEntry[];
   locations: LocationEntry[];
+  images: ImageEntry[];
   universeId: string | null;
 }) {
   const searchParams = useSearchParams();
@@ -269,6 +330,13 @@ export default function PopupLayer({
     content = locations.length === 0
       ? <EmptyState title={title} newHref={newHref} />
       : <CardGrid>{locations.map((l) => <LocationCard key={l.id} loc={l} href={`/admin/locations/${l.id}`} />)}</CardGrid>;
+
+  } else if (popup === "images") {
+    title = "Images";
+    newHref = "/admin/images/new";
+    content = images.length === 0
+      ? <EmptyState title={title} newHref={newHref} />
+      : <CardGrid>{images.map((i) => <ImageGalleryCard key={i.id} img={i} href={`/admin/images/${i.id}`} />)}</CardGrid>;
 
   } else {
     return null;
