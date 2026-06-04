@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
 type Entry = { id: string; title: string };
+type CharEntry = { id: string; name: string };
 type PlotEntry = { id: string; text: string; checked: boolean };
 
 export type SidebarData = {
@@ -12,6 +13,7 @@ export type SidebarData = {
   ideas: Entry[];
   notes: Entry[];
   plotItems: PlotEntry[];
+  characters: CharEntry[];
 };
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -277,7 +279,7 @@ function PlotChecklistTool({
 
 // ── Main sidebar ─────────────────────────────────────────────────────────────
 
-export default function SidebarClient({ universeId, ideas, notes, plotItems }: SidebarData) {
+export default function SidebarClient({ universeId, ideas, notes, plotItems, characters }: SidebarData) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -328,8 +330,13 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems }: S
       {/* Story Bible label */}
       <div style={sectionLabel}>Story Bible</div>
 
-      {/* Characters — placeholder */}
-      <SidebarTool label="Characters" isPlaceholder />
+      {/* Characters */}
+      <SidebarTool
+        label="Characters"
+        entries={characters.map((c) => ({ id: c.id, title: c.name }))}
+        onWordClick={() => openPopup("characters")}
+        entryHref={(id) => `/admin/characters/${id}`}
+      />
 
       {/* Locations — placeholder */}
       <SidebarTool label="Locations" isPlaceholder />

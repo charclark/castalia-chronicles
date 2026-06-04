@@ -33,6 +33,76 @@ model Universe {
   storylineIdeas StorylineIdea[]
   notes          Note[]
   plotItems      PlotItem[]
+  characters     Character[]
+}
+
+// --- Characters ---
+// Rich character profiles. characterType is one of: Vampire, Human, Wizard,
+// Werewolf, Shapeshifter, Ghost, Other. subtype is a free-text kind/subtype.
+// Relationships are stored in CharacterRelationship and link to other characters
+// in the SAME universe — used by the auto-drawn Connections Map.
+model Character {
+  id              String   @id @default(cuid())
+  universeId      String
+  universe        Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+
+  // Identity
+  name            String
+  characterType   String   @default("Human")
+  subtype         String?
+
+  // Appearance
+  hairColor       String?
+  eyeColor        String?
+  bodyType        String?
+
+  // Personality
+  attitude        String?
+  quirks          String?
+  speakingStyle   String?
+  phrases         String?  // frequently said phrases
+
+  // Background
+  origin          String?
+  livesIn         String?
+  homeDescription String?
+
+  // Life
+  vehicles        String?
+  jobs            String?
+  pets            String?
+
+  // General
+  notes           String?
+
+  // Relationships (see CharacterRelationship)
+  relFrom         CharacterRelationship[] @relation("RelFrom")
+  relTo           CharacterRelationship[] @relation("RelTo")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([universeId])
+}
+
+// --- Character Relationships ---
+// Directed edge: fromCharacter has [type] relationship with toCharacter.
+// Both must belong to the same universe (enforced at app level).
+// type: "relative" | "friend" | "enemy"
+// note: optional short label e.g. "brother", "rival"
+model CharacterRelationship {
+  id              String    @id @default(cuid())
+  fromCharacterId String
+  toCharacterId   String
+  fromCharacter   Character @relation("RelFrom", fields: [fromCharacterId], references: [id], onDelete: Cascade)
+  toCharacter     Character @relation("RelTo",   fields: [toCharacterId],   references: [id], onDelete: Cascade)
+  type            String    // "relative" | "friend" | "enemy"
+  note            String?
+
+  createdAt       DateTime  @default(now())
+
+  @@index([fromCharacterId])
+  @@index([toCharacterId])
 }
 
 // --- Storyline Ideas ---
