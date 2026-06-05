@@ -107,6 +107,7 @@ export default async function FreeReadPage() {
                   style={{ textDecoration: "none" }}
                 >
                   <article
+                    className="hover-border-light"
                     style={{
                       background: "var(--color-bg-surface)",
                       border: "1px solid var(--color-border)",
@@ -115,12 +116,6 @@ export default async function FreeReadPage() {
                       transition: "border-color 0.2s",
                       cursor: "pointer",
                     }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLElement).style.borderColor = "var(--color-border-light)")
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLElement).style.borderColor = "var(--color-border)")
-                    }
                   >
                     <div
                       style={{

@@ -143,6 +143,10 @@ a:hover { color: var(--color-gold-dim); }
   border-color: var(--color-ink-faint);
 }
 
+/* Hover border helpers — used by server components that can't use onMouseEnter */
+.hover-border-light:hover  { border-color: var(--color-border-light) !important; }
+.hover-border-gold:hover   { border-color: var(--color-gold-dim) !important; }
+
 /* ── TipTap Writing Editor ──────────────────────────────────────────────── */
 .tiptap-writing-area {
   font-family: var(--font-body);

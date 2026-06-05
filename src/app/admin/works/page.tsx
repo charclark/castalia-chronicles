@@ -192,6 +192,7 @@ function WorkRow({ item }: { item: WorkItem }) {
   return (
     <Link
       href={`/admin/works/${item.id}`}
+      className="hover-border-gold"
       style={{
         display: "flex",
         alignItems: "center",
@@ -204,12 +205,6 @@ function WorkRow({ item }: { item: WorkItem }) {
         transition: "border-color 0.15s",
         gap: "1rem",
       }}
-      onMouseEnter={(e) =>
-        (e.currentTarget.style.borderColor = "var(--color-gold-dim)")
-      }
-      onMouseLeave={(e) =>
-        (e.currentTarget.style.borderColor = "var(--color-border)")
-      }
     >
       <span
         style={{
