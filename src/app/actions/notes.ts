@@ -19,8 +19,9 @@ export async function createNote(
   if (!title) return { error: "Title is required." };
   if (title.length > 200) return { error: "Title must be 200 characters or less." };
 
-  const note = await prisma.note.create({ data: { universeId, title, content } });
-  redirect(`/admin/notes/${note.id}`);
+  await prisma.note.create({ data: { universeId, title, content } });
+  revalidatePath("/admin", "layout");
+  return { success: "Note created." };
 }
 
 export async function updateNote(

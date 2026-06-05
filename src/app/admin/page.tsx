@@ -98,10 +98,26 @@ export default async function AdminDashboard() {
             {currentUniverse.name}
           </p>
           {currentUniverse.description && (
-            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-ink-muted)" }}>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "var(--color-ink-muted)", marginBottom: "0.75rem" }}>
               {currentUniverse.description}
             </p>
           )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "1.25rem", marginTop: currentUniverse.description ? 0 : "0.5rem" }}>
+            {[
+              { label: "Characters", count: charCount as number },
+              { label: "Locations",  count: locCount as number },
+              { label: "Works",      count: workCount as number },
+            ].map(({ label, count }) => (
+              <div key={label} style={{ display: "flex", flexDirection: "column", gap: "0.1rem" }}>
+                <span style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", color: count > 0 ? "var(--color-ink)" : "var(--color-ink-faint)", lineHeight: 1 }}>
+                  {count}
+                </span>
+                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-ink-faint)" }}>
+                  {label}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
         <div

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition, useState } from "react";
+import { useActionState, useTransition, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -418,8 +418,18 @@ export default function CharacterForm({
   const isNew = !character;
 
   const saveAction = isNew ? createCharacter : updateCharacter;
+  const [formKey, setFormKey] = useState(0);
   const [state, action, savePending] = useActionState(saveAction, null);
   const [deletePending, startDelete] = useTransition();
+
+  useEffect(() => {
+    if (isNew && state?.success) {
+      setFormKey((k) => k + 1);
+      setSelectedRoles([]);
+      router.refresh();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   // Role state
   const [selectedRoles, setSelectedRoles] = useState<string[]>(currentRoles);
@@ -522,7 +532,7 @@ export default function CharacterForm({
         </div>
       )}
 
-      <form action={action} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+      <form key={formKey} action={action} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {character && <input type="hidden" name="id" value={character.id} />}
 
         {/* ── Identity ── */}

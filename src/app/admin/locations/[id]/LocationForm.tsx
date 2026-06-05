@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateLocation, createLocation, deleteLocation } from "@/app/actions/locations";
 
@@ -72,8 +72,17 @@ export default function LocationForm({ location }: { location?: LocationData }) 
   const isNew = !location;
 
   const saveAction = isNew ? createLocation : updateLocation;
+  const [formKey, setFormKey] = useState(0);
   const [state, action, savePending] = useActionState(saveAction, null);
   const [deletePending, startDelete] = useTransition();
+
+  useEffect(() => {
+    if (isNew && state?.success) {
+      setFormKey((k) => k + 1);
+      router.refresh();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   function handleDelete() {
     if (!window.confirm(`Delete "${location!.name}"? This cannot be undone.`)) return;
@@ -121,7 +130,7 @@ export default function LocationForm({ location }: { location?: LocationData }) 
         </div>
       )}
 
-      <form action={action} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+      <form key={formKey} action={action} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {location && <input type="hidden" name="id" value={location.id} />}
 
         {/* ── Identity ── */}

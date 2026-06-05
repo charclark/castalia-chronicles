@@ -274,16 +274,19 @@ function docRule(): Paragraph {
 
 // ── Work .docx ────────────────────────────────────────────────────────────────
 
-export async function buildWorkDocx(work: {
-  title: string;
-  type: string;
-  status: string;
-  publishMode: string | null;
-  description: string | null;
-  content: string | null;
-  snippet: string | null;
-  publishedAt: Date | null;
-}): Promise<Buffer> {
+export async function buildWorkDocx(
+  work: {
+    title: string;
+    type: string;
+    status: string;
+    publishMode: string | null;
+    description: string | null;
+    content: string | null;
+    snippet: string | null;
+    publishedAt: Date | null;
+  },
+  chapters?: { title: string; content: string | null; order: number }[]
+): Promise<Buffer> {
   const children: Paragraph[] = [
     new Paragraph({
       heading: HeadingLevel.TITLE,
@@ -299,8 +302,28 @@ export async function buildWorkDocx(work: {
     ...(work.description ? [docField("Description", work.description)] : []),
     docSpacer(),
     docRule(),
-    ...htmlToDocxParagraphs(work.content),
   ];
+
+  // Use chapters if available; fall back to legacy work.content
+  const sortedChapters = chapters
+    ? [...chapters].sort((a, b) => a.order - b.order)
+    : null;
+
+  if (sortedChapters && sortedChapters.length > 0) {
+    for (const ch of sortedChapters) {
+      children.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          children: [new TextRun({ text: ch.title })],
+          spacing: { before: 480, after: 200 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 4, space: 4, color: "CCCCCC" } },
+        }),
+        ...htmlToDocxParagraphs(ch.content),
+      );
+    }
+  } else {
+    children.push(...htmlToDocxParagraphs(work.content));
+  }
 
   if (work.snippet) {
     children.push(

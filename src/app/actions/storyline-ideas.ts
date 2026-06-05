@@ -19,11 +19,12 @@ export async function createStorylineIdea(
   if (!title) return { error: "Title is required." };
   if (title.length > 200) return { error: "Title must be 200 characters or less." };
 
-  const idea = await prisma.storylineIdea.create({
+  await prisma.storylineIdea.create({
     data: { universeId, title, content },
   });
 
-  redirect(`/admin/storyline-ideas/${idea.id}`);
+  revalidatePath("/admin", "layout");
+  return { success: "Idea created." };
 }
 
 export async function updateStorylineIdea(

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,22 @@ export default async function AboutPage() {
       }}
     >
       <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+        <Link
+          href="/"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.35rem",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.85rem",
+            color: "var(--color-ink-faint)",
+            textDecoration: "none",
+            letterSpacing: "0.04em",
+            marginBottom: "2rem",
+          }}
+        >
+          ← Home
+        </Link>
         {/* Section heading */}
         <div style={{ marginBottom: "clamp(2rem, 5vw, 3.5rem)" }}>
           <p

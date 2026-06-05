@@ -268,13 +268,13 @@ function PublishingSection({ work }: { work: WorkMeta }) {
                   fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--color-ink)",
                   display: "block",
                 }}>
-                  Publish the full work
+                  Publish the full work — Free Read
                 </span>
                 <span style={{
                   fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)",
                   fontStyle: "italic",
                 }}>
-                  The entire written content becomes publicly readable.
+                  The entire written content is readable online on the Free Read page.
                 </span>
               </span>
             </label>
@@ -293,13 +293,13 @@ function PublishingSection({ work }: { work: WorkMeta }) {
                   fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--color-ink)",
                   display: "block",
                 }}>
-                  Publish a snippet / teaser only
+                  Publish a snippet / teaser only — Published Books
                 </span>
                 <span style={{
                   fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)",
                   fontStyle: "italic",
                 }}>
-                  Only your chosen excerpt is public. The full content stays private.
+                  Only your chosen excerpt is shown publicly. The full content stays private.
                 </span>
               </span>
             </label>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type EditorState = { error?: string; success?: string } | null;
@@ -37,9 +37,18 @@ export default function EntryEditor({
   deleteAction?: DeleteAction;
   typeName: string;      // e.g. "Idea", "Note"
 }) {
+  const [formKey, setFormKey] = useState(0);
   const [state, action, savePending] = useActionState(saveAction, null);
   const [deletePending, startDelete] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    if (isNew && state?.success) {
+      setFormKey((k) => k + 1);
+      router.refresh();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   function handleDelete() {
     if (
@@ -134,7 +143,7 @@ export default function EntryEditor({
         </div>
       )}
 
-      <form action={action} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+      <form key={formKey} action={action} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {id && <input type="hidden" name="id" value={id} />}
 
         {/* Title */}

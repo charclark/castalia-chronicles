@@ -4,7 +4,7 @@ import { requireUniverseEdit } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
-export type PlotState = { error?: string } | null;
+export type PlotState = { error?: string; success?: boolean } | null;
 
 
 export async function createPlotItem(
@@ -19,7 +19,7 @@ export async function createPlotItem(
   await prisma.plotItem.create({ data: { universeId, text } });
   revalidatePath("/admin/plot-checklist");
   revalidatePath("/admin", "layout");
-  return null;
+  return { success: true };
 }
 
 export async function togglePlotItem(id: string, checked: boolean): Promise<void> {

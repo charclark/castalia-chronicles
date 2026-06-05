@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useActionState, useTransition } from "react";
+import { useOptimistic, useActionState, useTransition, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createPlotItem,
@@ -35,9 +35,18 @@ export default function PlotChecklistClient({
     }
   );
 
+  const [addFormKey, setAddFormKey] = useState(0);
   const [addState, addAction, addPending] = useActionState(createPlotItem, null);
   const [deletingId, startDelete] = useTransition();
   const [togglingId, startToggle] = useTransition();
+
+  useEffect(() => {
+    if (addState?.success) {
+      setAddFormKey((k) => k + 1);
+      router.refresh();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addState]);
 
   function handleToggle(id: string, checked: boolean) {
     startToggle(async () => {
@@ -62,6 +71,7 @@ export default function PlotChecklistClient({
     <div>
       {/* Add item form */}
       <form
+        key={addFormKey}
         action={addAction}
         style={{
           display: "flex",

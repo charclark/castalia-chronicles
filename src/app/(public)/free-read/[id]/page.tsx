@@ -30,20 +30,31 @@ export default async function ReaderPage({
       <OpenCountIncrementer workId={id} />
 
       <article style={{ maxWidth: "680px", margin: "0 auto" }}>
-        {/* Back link */}
-        <Link
-          href="/free-read"
-          style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "0.88rem",
-            color: "var(--color-ink-faint)",
-            textDecoration: "none",
-            display: "inline-block",
-            marginBottom: "2rem",
-          }}
-        >
-          ← Free Read
-        </Link>
+        {/* Back links */}
+        <div style={{ display: "flex", gap: "1.5rem", marginBottom: "2rem" }}>
+          <Link
+            href="/"
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.85rem",
+              color: "var(--color-ink-faint)",
+              textDecoration: "none",
+            }}
+          >
+            ← Home
+          </Link>
+          <Link
+            href="/free-read"
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.85rem",
+              color: "var(--color-ink-faint)",
+              textDecoration: "none",
+            }}
+          >
+            ← Free Read
+          </Link>
+        </div>
 
         {/* Title block */}
         <header style={{ marginBottom: "3rem" }}>

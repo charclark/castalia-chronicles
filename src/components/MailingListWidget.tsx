@@ -101,7 +101,7 @@ export default function MailingListWidget() {
         onClick={openPopup}
         className="pub-cta-primary"
       >
-        Subscribe
+        Get Updates!
       </button>
 
       {/* ── Popup overlay ── */}
@@ -109,7 +109,7 @@ export default function MailingListWidget() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Subscribe to mailing list"
+          aria-label="Get updates — join the mailing list"
           style={{
             position: "fixed",
             inset: 0,
@@ -165,8 +165,8 @@ export default function MailingListWidget() {
                 </p>
                 <p style={{ fontFamily: "var(--font-body)", fontSize: "1rem", color: "var(--color-ink-muted)", lineHeight: 1.75, marginBottom: "1.5rem" }}>
                   {alreadySubscribed
-                    ? "That email address is already subscribed. I'll be in touch when new stories arrive."
-                    : "Thank you for subscribing. I'll reach out when new stories and announcements arrive."}
+                    ? "That email address is already on the list. I'll be in touch when new stories arrive."
+                    : "Thank you! I'll reach out when new stories and announcements arrive."}
                 </p>
                 <button
                   type="button"
@@ -242,7 +242,7 @@ export default function MailingListWidget() {
                       alignSelf: "flex-start",
                     }}
                   >
-                    {pending ? "Subscribing…" : "Subscribe →"}
+                    {pending ? "Signing up…" : "Get Updates! →"}
                   </button>
                 </form>
               </>

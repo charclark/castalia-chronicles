@@ -31,12 +31,18 @@ export async function GET(
   });
   if (!work) return new NextResponse("Not found", { status: 404 });
 
+  const chapters = await prisma.chapter.findMany({
+    where: { workId: id },
+    orderBy: { order: "asc" },
+    select: { title: true, content: true, order: true },
+  });
+
   const format = req.nextUrl.searchParams.get("format") ?? "json";
   const dateStr = new Date().toISOString().slice(0, 10);
   const slug = slugify(work.title);
 
   if (format === "docx") {
-    const buf = await buildWorkDocx(work);
+    const buf = await buildWorkDocx(work, chapters);
     return new NextResponse(new Uint8Array(buf), {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -48,7 +54,7 @@ export async function GET(
   // JSON backup
   const payload = {
     castalia_backup: "work",
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     work: {
       title: work.title,
@@ -63,6 +69,11 @@ export async function GET(
       publishedAt: work.publishedAt?.toISOString() ?? null,
       createdAt: work.createdAt.toISOString(),
     },
+    chapters: chapters.map((ch) => ({
+      title: ch.title,
+      content: ch.content,
+      order: ch.order,
+    })),
   };
 
   return new NextResponse(JSON.stringify(payload, null, 2), {

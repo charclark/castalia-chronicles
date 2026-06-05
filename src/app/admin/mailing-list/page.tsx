@@ -53,7 +53,7 @@ export default async function MailingListPage() {
               fontStyle: "italic",
             }}
           >
-            Emails collected via the Subscribe popup. Export to use with any
+            Emails collected via the Get Updates! popup. Export to use with any
             mailing service.
           </p>
         </div>

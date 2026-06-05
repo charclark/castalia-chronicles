@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import FeedbackPopup from "./FeedbackPopup";
+import MailingListWidget from "./MailingListWidget";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
@@ -96,6 +97,7 @@ export default function PublicNav() {
             );
           })}
 
+          <MailingListWidget />
           <FeedbackPopup />
 
           {/* Subtle admin entry point — small, unobtrusive, far right */}

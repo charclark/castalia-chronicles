@@ -227,6 +227,21 @@ function clearEditorSearch(editor: Editor | null) {
   );
 }
 
+function removeAllHighlights(editor: Editor) {
+  const highlightType = editor.schema.marks.highlight;
+  if (!highlightType) return;
+  const { tr, doc } = editor.state;
+  let changed = false;
+  doc.descendants((node, pos) => {
+    if (!node.isText) return;
+    if (node.marks.some((m) => m.type === highlightType)) {
+      tr.removeMark(pos, pos + node.nodeSize, highlightType);
+      changed = true;
+    }
+  });
+  if (changed) editor.view.dispatch(tr);
+}
+
 // ── Flag ProseMirror plugin ───────────────────────────────────────────────────
 
 const flagPluginKey = new PluginKey<DecorationSet>("editor-flags");
@@ -263,7 +278,8 @@ function buildFlagDecorations(
           wrap.className = "flag-widget";
           const icon = document.createElement("span");
           icon.className = "flag-icon";
-          icon.textContent = flag.color === "yellow" ? "🚩" : "🔴";
+          icon.textContent = "⚑";
+          icon.style.color = flag.color === "yellow" ? "#c9a84c" : "#8b2635";
           icon.title = `${flag.color === "yellow" ? "Revisit" : "Urgent"}: ${flag.snippet}`;
           wrap.appendChild(icon);
           return wrap;
@@ -340,7 +356,8 @@ function injectFlagAtOffset(
       wrap.title = `${color === "yellow" ? "Revisit" : "Urgent"}: ${snippet}`;
       const icon = doc.createElement("span");
       icon.className = "flag-icon";
-      icon.textContent = color === "yellow" ? "🚩" : "🔴";
+      icon.textContent = "⚑";
+      icon.style.color = color === "yellow" ? "#c9a84c" : "#8b2635";
       wrap.appendChild(icon);
       const after = doc.createTextNode(text.slice(local));
 
@@ -492,6 +509,7 @@ function EditorToolbar({
   hasSelection?: boolean;
   onToggleSearch: () => void;
   searchActive: boolean;
+  // onRemoveHighlights intentionally omitted from props — called directly via editor
 }) {
   const marks = useEditorState({
     editor,
@@ -580,8 +598,32 @@ function EditorToolbar({
         </>
       )}
 
-      {/* Search toggle */}
-      <div style={{ marginLeft: "auto" }}>
+      {/* Remove Highlights + Search — pushed to right */}
+      <div style={{ marginLeft: "auto", display: "flex", gap: "0.35rem", alignItems: "center" }}>
+        <button
+          type="button"
+          title="Remove all highlights from this chapter"
+          disabled={!editor}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (editor) removeAllHighlights(editor);
+          }}
+          style={{
+            background: "transparent",
+            border: "1px solid var(--color-border)",
+            borderRadius: "3px",
+            padding: "0.2rem 0.55rem",
+            color: editor ? "var(--color-ink-muted)" : "var(--color-ink-faint)",
+            fontFamily: "var(--font-heading)",
+            fontSize: "0.82rem",
+            letterSpacing: "0.04em",
+            cursor: editor ? "pointer" : "default",
+            lineHeight: 1.5,
+            opacity: editor ? 1 : 0.4,
+          }}
+        >
+          ✦×
+        </button>
         <button
           type="button"
           title="Search (⌘F)"
@@ -727,6 +769,7 @@ function SearchBar({
 type ChapterSectionHandle = {
   scrollIntoView: () => void;
   editor: Editor | null;
+  getContent: () => string | null;
 };
 
 const ChapterSection = forwardRef<
@@ -736,10 +779,11 @@ const ChapterSection = forwardRef<
     workId: string;
     onFocus: (editor: Editor, chapterId: string) => void;
     onWordCount: (chapterId: string, count: number) => void;
+    onContentSaved: (chapterId: string, html: string) => void;
     chapterNumber: number;
     flags: FlagData[];
   }
->(({ chapter, workId, onFocus, onWordCount, chapterNumber, flags }, ref) => {
+>(({ chapter, workId, onFocus, onWordCount, onContentSaved, chapterNumber, flags }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flagsRef = useRef<FlagData[]>(flags);
@@ -754,11 +798,12 @@ const ChapterSection = forwardRef<
         await saveChapterContent(chapter.id, workId, html);
         setSavedAt(new Date());
         setSaveStatus("saved");
+        onContentSaved(chapter.id, html);
       } catch {
         setSaveStatus("idle");
       }
     },
-    [chapter.id, workId]
+    [chapter.id, workId, onContentSaved]
   );
 
   const chapterId = chapter.id;
@@ -815,6 +860,7 @@ const ChapterSection = forwardRef<
     scrollIntoView: () =>
       containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
     editor: editor ?? null,
+    getContent: () => editor?.getHTML() ?? null,
   }));
 
   const statusText =
@@ -1325,6 +1371,16 @@ export default function WritingEditor({
   // Flags state
   const [flags, setFlags] = useState<FlagData[]>(initialFlags);
 
+  // Live chapter content — updated when each chapter auto-saves
+  const handleContentSaved = useCallback((chapterId: string, html: string) => {
+    setChapters((prev) =>
+      prev.map((c) => (c.id === chapterId ? { ...c, content: html } : c))
+    );
+  }, []);
+
+  // Snapshot of chapters passed to ReadFullStory (captures live editor content at open time)
+  const [storyChapters, setStoryChapters] = useState<ChapterData[]>([]);
+
   // Search state
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1351,27 +1407,64 @@ export default function WritingEditor({
     setActiveChapterId(chapterId);
   }, []);
 
-  // Apply search to active editor
+  // Apply search across ALL chapter editors simultaneously.
+  // Each editor shows all its matches; the globally-current match gets
+  // search-match--current and is scrolled into view.
   useEffect(() => {
-    if (!activeEditor) return;
     if (!showSearch || !searchQuery.trim()) {
-      clearEditorSearch(activeEditor);
+      // Clear every editor
+      chapters.forEach((ch) => {
+        const h = sectionRefs.current.get(ch.id);
+        if (h?.editor) clearEditorSearch(h.editor);
+      });
       setSearchTotal(0);
       return;
     }
-    const total = applyEditorSearch(activeEditor, searchQuery, searchCurrent);
+
+    let total = 0;
+    let globalOffset = 0;
+
+    for (const ch of chapters) {
+      const handle = sectionRefs.current.get(ch.id);
+      if (!handle?.editor) continue;
+      const ed = handle.editor;
+      const matches = findDocMatches(ed.state.doc, searchQuery);
+
+      if (!matches.length) {
+        clearEditorSearch(ed);
+        continue;
+      }
+
+      const localIdx = searchCurrent - globalOffset;
+      const isCurrent = localIdx >= 0 && localIdx < matches.length;
+
+      ed.view.dispatch(
+        ed.state.tr.setMeta(searchPluginKey, {
+          query: searchQuery,
+          matches,
+          currentIdx: isCurrent ? localIdx : -1,
+        })
+      );
+
+      if (isCurrent && matches[localIdx]) {
+        const m = matches[localIdx];
+        ed.commands.setTextSelection({ from: m.from, to: m.to });
+        handle.scrollIntoView();
+        setTimeout(() => {
+          ed.view.dom
+            .querySelector(".search-match--current")
+            ?.scrollIntoView({ block: "center", behavior: "smooth" });
+        }, 50);
+      }
+
+      globalOffset += matches.length;
+      total += matches.length;
+    }
+
     setSearchTotal(total);
     if (searchCurrent >= total && total > 0) setSearchCurrent(total - 1);
-  }, [activeEditor, showSearch, searchQuery, searchCurrent]);
-
-  useEffect(() => {
-    if (showSearch && activeEditor && searchQuery.trim()) {
-      const total = applyEditorSearch(activeEditor, searchQuery, 0);
-      setSearchTotal(total);
-      setSearchCurrent(0);
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeEditor]);
+  }, [showSearch, searchQuery, searchCurrent, chapters]);
 
   // Ctrl/Cmd+F
   useEffect(() => {
@@ -1395,7 +1488,10 @@ export default function WritingEditor({
     setSearchQuery("");
     setSearchCurrent(0);
     setSearchTotal(0);
-    clearEditorSearch(activeEditor);
+    chapters.forEach((ch) => {
+      const h = sectionRefs.current.get(ch.id);
+      if (h?.editor) clearEditorSearch(h.editor);
+    });
   }
 
   function handleSearchQueryChange(q: string) {
@@ -1496,6 +1592,17 @@ export default function WritingEditor({
 
   function handleJump(id: string) { sectionRefs.current.get(id)?.scrollIntoView(); }
 
+  function openFullStory() {
+    // Snapshot live editor content so ReadFullStory shows what's actually typed,
+    // not only what's been auto-saved to the DB.
+    const live = chapters.map((ch) => {
+      const handle = sectionRefs.current.get(ch.id);
+      return { ...ch, content: handle?.getContent() ?? ch.content };
+    });
+    setStoryChapters(live);
+    setShowFullStory(true);
+  }
+
   async function handleSetSnippet() {
     if (!activeEditor) return;
     const { from, to } = activeEditor.state.selection;
@@ -1540,10 +1647,12 @@ export default function WritingEditor({
 
   return (
     <>
-      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Outer container fills the admin's content area and manages its own scroll,
+          so the header, toolbar and right panel can all stay permanently visible. */}
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
 
-        {/* ── Top header ── */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+        {/* ── Top header (always visible) ── */}
+        <div style={{ flexShrink: 0, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", paddingBottom: "0.75rem", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <button type="button" onClick={() => router.push(backHref)}
               style={{ background: "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-faint)", padding: 0, marginBottom: "0.4rem", display: "block" }}>
@@ -1567,12 +1676,10 @@ export default function WritingEditor({
           </div>
         </div>
 
-        {/* ── Toolbar ── */}
+        {/* ── Toolbar (always visible) ── */}
         <div
           style={{
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
+            flexShrink: 0,
             background: "var(--color-bg)",
             borderTop: "1px solid var(--color-border)",
             borderBottom: showSearch ? "none" : "1px solid var(--color-border)",
@@ -1590,9 +1697,9 @@ export default function WritingEditor({
           />
         </div>
 
-        {/* ── Search bar ── */}
+        {/* ── Search bar (always visible when open) ── */}
         {showSearch && (
-          <div style={{ position: "sticky", top: "2.6rem", zIndex: 9 }}>
+          <div style={{ flexShrink: 0 }}>
             <SearchBar
               query={searchQuery}
               onQueryChange={handleSearchQueryChange}
@@ -1606,8 +1713,8 @@ export default function WritingEditor({
           </div>
         )}
 
-        {/* ── Main body ── */}
-        <div style={{ display: "flex", gap: "1.5rem", alignItems: "flex-start", marginTop: "1.5rem", flex: 1 }}>
+        {/* ── Scrollable body ── writing area + right panel scroll together; right panel sticks within this container */}
+        <div style={{ flex: 1, overflowY: "auto", display: "flex", gap: "1.5rem", alignItems: "flex-start", paddingTop: "1.5rem" }}>
           {/* Writing area */}
           <div style={{ flex: "1 1 0", minWidth: 0 }}>
             {chapters.map((ch, idx) => (
@@ -1619,6 +1726,7 @@ export default function WritingEditor({
                 chapterNumber={idx + 1}
                 onFocus={handleFocus}
                 onWordCount={handleWordCount}
+                onContentSaved={handleContentSaved}
                 flags={flags}
               />
             ))}
@@ -1633,7 +1741,7 @@ export default function WritingEditor({
 
           {/* Right panel */}
           {panelOpen && (
-            <div style={{ flexShrink: 0, width: "250px", position: "sticky", top: 0, maxHeight: "calc(100vh - 80px)", overflowY: "auto", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "4px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={{ flexShrink: 0, width: "250px", position: "sticky", top: 0, maxHeight: "100%", overflowY: "auto", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "4px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
 
               {/* ── Flag buttons ── */}
               <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -1641,19 +1749,25 @@ export default function WritingEditor({
                   type="button"
                   title={hasSelection ? "Yellow flag — mark for revisit" : "Select text first"}
                   disabled={!hasSelection}
-                  onClick={() => handleFlagCreateFromEditor("yellow")}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // keep editor selection alive
+                    if (hasSelection) handleFlagCreateFromEditor("yellow");
+                  }}
                   style={flagBtnStyle("yellow", false)}
                 >
-                  🚩 Revisit
+                  <span style={{ color: "#c9a84c" }}>⚑</span> Revisit
                 </button>
                 <button
                   type="button"
                   title={hasSelection ? "Red flag — urgent fix needed" : "Select text first"}
                   disabled={!hasSelection}
-                  onClick={() => handleFlagCreateFromEditor("red")}
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // keep editor selection alive
+                    if (hasSelection) handleFlagCreateFromEditor("red");
+                  }}
                   style={flagBtnStyle("red", false)}
                 >
-                  🔴 Urgent
+                  <span style={{ color: "#8b2635" }}>⚑</span> Urgent
                 </button>
               </div>
 
@@ -1708,7 +1822,7 @@ export default function WritingEditor({
               <div style={{ height: "1px", background: "var(--color-border)" }} />
 
               {/* ── Existing: Read Full Story + Chapter Panel ── */}
-              <button type="button" onClick={() => setShowFullStory(true)}
+              <button type="button" onClick={openFullStory}
                 style={{ width: "100%", background: "var(--color-crimson)", border: "none", borderRadius: "3px", padding: "0.6rem 0.75rem", color: "var(--color-ink)", fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em", cursor: "pointer" }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#7a1f2e")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-crimson)")}
@@ -1737,7 +1851,7 @@ export default function WritingEditor({
       {showFullStory && (
         <ReadFullStory
           title={title}
-          chapters={chapters}
+          chapters={storyChapters}
           flags={flags}
           onFlagCreate={handleFlagCreate}
           onFlagDelete={handleFlagDelete}

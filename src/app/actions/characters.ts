@@ -20,7 +20,7 @@ export async function createCharacter(
 
   const roles = formData.getAll("roles") as string[];
 
-  const character = await prisma.character.create({
+  await prisma.character.create({
     data: {
       universeId,
       name,
@@ -46,7 +46,8 @@ export async function createCharacter(
     },
   });
 
-  redirect(`/admin/characters/${character.id}`);
+  revalidatePath("/admin", "layout");
+  return { success: "Character created." };
 }
 
 export async function updateCharacter(

@@ -42,6 +42,22 @@ export default async function BooksPage() {
       }}
     >
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
+        <Link
+          href="/"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.35rem",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.85rem",
+            color: "var(--color-ink-faint)",
+            textDecoration: "none",
+            letterSpacing: "0.04em",
+            marginBottom: "2rem",
+          }}
+        >
+          ← Home
+        </Link>
         {/* Page heading */}
         <div style={{ marginBottom: "clamp(2.5rem, 6vw, 4rem)", textAlign: "center" }}>
           <p

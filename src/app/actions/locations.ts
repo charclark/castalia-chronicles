@@ -17,7 +17,7 @@ export async function createLocation(
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Name is required." };
 
-  const location = await prisma.location.create({
+  await prisma.location.create({
     data: {
       universeId,
       name,
@@ -29,7 +29,8 @@ export async function createLocation(
     },
   });
 
-  redirect(`/admin/locations/${location.id}`);
+  revalidatePath("/admin", "layout");
+  return { success: "Location created." };
 }
 
 export async function updateLocation(
