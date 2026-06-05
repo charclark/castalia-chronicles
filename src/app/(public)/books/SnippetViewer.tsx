@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Props {
   title: string;
@@ -9,6 +9,29 @@ interface Props {
 
 export default function SnippetViewer({ title, snippet }: Props) {
   const [open, setOpen] = useState(false);
+
+  // Register in browser history when open so the Back button closes this popup
+  useEffect(() => {
+    if (!open) return;
+
+    history.pushState({ snippetOpen: true }, "");
+    document.body.style.overflow = "hidden";
+
+    function handlePopState() {
+      setOpen(false);
+    }
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  function handleClose() {
+    // Navigate back — the popstate listener above calls setOpen(false)
+    history.back();
+  }
 
   return (
     <>
@@ -23,6 +46,9 @@ export default function SnippetViewer({ title, snippet }: Props) {
 
       {open && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Sample: ${title}`}
           style={{
             position: "fixed",
             inset: 0,
@@ -32,7 +58,9 @@ export default function SnippetViewer({ title, snippet }: Props) {
             flexDirection: "column",
             overflowY: "auto",
           }}
-          onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) handleClose();
+          }}
         >
           <div
             style={{
@@ -45,7 +73,7 @@ export default function SnippetViewer({ title, snippet }: Props) {
             {/* Back button */}
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={handleClose}
               style={{
                 background: "transparent",
                 border: "none",
@@ -89,7 +117,12 @@ export default function SnippetViewer({ title, snippet }: Props) {
             </h2>
             <div
               aria-hidden
-              style={{ width: "48px", height: "1px", background: "var(--color-gold-dim)", marginBottom: "2rem" }}
+              style={{
+                width: "48px",
+                height: "1px",
+                background: "var(--color-gold-dim)",
+                marginBottom: "2rem",
+              }}
             />
 
             {/* Snippet content */}
@@ -100,7 +133,7 @@ export default function SnippetViewer({ title, snippet }: Props) {
               />
             </div>
 
-            {/* Footer */}
+            {/* Footer ornament */}
             <div
               aria-hidden
               style={{
@@ -111,14 +144,34 @@ export default function SnippetViewer({ title, snippet }: Props) {
                 marginBottom: "2rem",
               }}
             >
-              <span style={{ display: "block", width: "60px", height: "1px", background: "linear-gradient(to right, transparent, var(--color-border-light))" }} />
-              <span style={{ color: "var(--color-gold)", fontSize: "0.65rem", opacity: 0.8 }}>✦</span>
-              <span style={{ display: "block", width: "60px", height: "1px", background: "linear-gradient(to left, transparent, var(--color-border-light))" }} />
+              <span
+                style={{
+                  display: "block",
+                  width: "60px",
+                  height: "1px",
+                  background:
+                    "linear-gradient(to right, transparent, var(--color-border-light))",
+                }}
+              />
+              <span
+                style={{ color: "var(--color-gold)", fontSize: "0.65rem", opacity: 0.8 }}
+              >
+                ✦
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  width: "60px",
+                  height: "1px",
+                  background:
+                    "linear-gradient(to left, transparent, var(--color-border-light))",
+                }}
+              />
             </div>
 
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={handleClose}
               style={{
                 background: "transparent",
                 border: "none",
