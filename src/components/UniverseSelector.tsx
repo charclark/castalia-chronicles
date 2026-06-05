@@ -82,7 +82,7 @@ export default function UniverseSelector({
           letterSpacing: "0.04em",
           cursor: "pointer",
           outline: "none",
-          maxWidth: "200px",
+          minWidth: "120px",
         }}
       >
         {universes.map((u) => (

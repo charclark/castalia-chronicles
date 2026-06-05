@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import MailingListClient from "./MailingListClient";
+import AddSubscriberForm from "./AddSubscriberForm";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,7 @@ export default async function MailingListPage() {
       </div>
 
       <MailingListClient entries={entries} />
+      <AddSubscriberForm />
     </div>
   );
 }

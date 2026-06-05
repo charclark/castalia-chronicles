@@ -10,6 +10,7 @@ import {
   addRelationship,
   removeRelationship,
 } from "@/app/actions/characters";
+import { createCustomRole, deleteCustomRole, DEFAULT_ROLES } from "@/app/actions/roles";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -349,14 +350,68 @@ function AddRelForm({
 
 // ── Main form ────────────────────────────────────────────────────────────────
 
+// ── Role badge colors ─────────────────────────────────────────────────────────
+
+const ROLE_BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  Protagonist: { bg: "rgba(201,168,76,0.15)", text: "var(--color-gold)", border: "var(--color-gold-dim)" },
+  Antagonist:  { bg: "rgba(139,38,53,0.15)",  text: "#d4848e",          border: "var(--color-crimson-dim)" },
+  Principal:   { bg: "rgba(58,107,158,0.15)", text: "#6a9ec8",          border: "#2a4a6e" },
+  Supporting:  { bg: "rgba(90,106,90,0.15)",  text: "#7a9a7a",          border: "#3a5a3a" },
+  Wildcard:    { bg: "rgba(158,106,58,0.15)", text: "#c8946a",          border: "#6e4a2a" },
+  Catalyst:    { bg: "rgba(122,74,158,0.15)", text: "#b07ad8",          border: "#5a3a7e" },
+  Shadow:      { bg: "rgba(90,90,106,0.15)",  text: "#8a8aaa",          border: "#3a3a5a" },
+  Minor:       { bg: "rgba(74,74,74,0.15)",   text: "#7a7a7a",          border: "#3a3a3a" },
+};
+
+function roleBadgeStyle(role: string): React.CSSProperties {
+  const c = ROLE_BADGE_COLORS[role] ?? {
+    bg: "rgba(100,100,100,0.12)", text: "var(--color-ink-muted)", border: "var(--color-border)",
+  };
+  return {
+    fontFamily: "var(--font-body)",
+    fontSize: "0.65rem",
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    background: c.bg,
+    color: c.text,
+    border: `1px solid ${c.border}`,
+    borderRadius: "2px",
+    padding: "0.1rem 0.45rem",
+    whiteSpace: "nowrap",
+  };
+}
+
+export function RoleBadges({ roles }: { roles: string[] }) {
+  if (!roles || roles.length === 0) return null;
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", alignItems: "center" }}>
+      {roles.map((r) => (
+        <span key={r} style={roleBadgeStyle(r)}>{r}</span>
+      ))}
+    </div>
+  );
+}
+
+// ── Main form ────────────────────────────────────────────────────────────────
+
 export default function CharacterForm({
   character,
   allChars,
   relationships,
+  customSpecies = [],
+  currentRoles = [],
+  customRoles = [],
+  isSuperAdmin = false,
+  universeId = "",
 }: {
   character?: CharacterData;
   allChars: OtherCharacter[];
   relationships?: Relationship[];
+  customSpecies?: string[];
+  currentRoles?: string[];
+  customRoles?: { id: string; name: string }[];
+  isSuperAdmin?: boolean;
+  universeId?: string;
 }) {
   const router = useRouter();
   const isNew = !character;
@@ -364,6 +419,45 @@ export default function CharacterForm({
   const saveAction = isNew ? createCharacter : updateCharacter;
   const [state, action, savePending] = useActionState(saveAction, null);
   const [deletePending, startDelete] = useTransition();
+
+  // Role state
+  const [selectedRoles, setSelectedRoles] = useState<string[]>(currentRoles);
+  const [localCustomRoles, setLocalCustomRoles] = useState(customRoles);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [roleError, setRoleError] = useState("");
+  const [rolePending, startRoleTransition] = useTransition();
+
+  const allRoles = [
+    ...Array.from(DEFAULT_ROLES),
+    ...localCustomRoles.map((r) => r.name),
+  ];
+
+  function toggleRole(role: string) {
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
+  }
+
+  function handleAddCustomRole(e: React.FormEvent) {
+    e.preventDefault();
+    setRoleError("");
+    startRoleTransition(async () => {
+      const r = await createCustomRole(universeId, newRoleName.trim());
+      if (r.error) { setRoleError(r.error); return; }
+      const name = newRoleName.trim();
+      setLocalCustomRoles((prev) => [...prev, { id: Date.now().toString(), name }]);
+      setNewRoleName("");
+    });
+  }
+
+  function handleDeleteCustomRole(id: string, name: string) {
+    if (!window.confirm(`Remove custom role "${name}"?`)) return;
+    startRoleTransition(async () => {
+      await deleteCustomRole(id);
+      setLocalCustomRoles((prev) => prev.filter((r) => r.id !== id));
+      setSelectedRoles((prev) => prev.filter((r) => r !== name));
+    });
+  }
 
   function handleDelete() {
     if (!window.confirm(`Delete "${character!.name}"? This cannot be undone.`)) return;
@@ -402,9 +496,12 @@ export default function CharacterForm({
         {isNew ? "New Character" : character.name}
       </h2>
       {!isNew && (
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "2rem" }}>
-          {character.characterType}{character.subtype ? ` · ${character.subtype}` : ""}
-        </p>
+        <div style={{ marginBottom: "2rem" }}>
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: selectedRoles.length > 0 ? "0.5rem" : 0 }}>
+            {character.characterType}{character.subtype ? ` · ${character.subtype}` : ""}
+          </p>
+          <RoleBadges roles={selectedRoles} />
+        </div>
       )}
       {isNew && (
         <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "2rem" }}>
@@ -442,6 +539,9 @@ export default function CharacterForm({
                   {CHARACTER_TYPES.map((t) => (
                     <option key={t} value={t} style={{ background: "var(--color-bg-elevated)" }}>{t}</option>
                   ))}
+                  {customSpecies.filter((s) => !CHARACTER_TYPES.includes(s as never)).map((s) => (
+                    <option key={s} value={s} style={{ background: "var(--color-bg-elevated)" }}>{s}</option>
+                  ))}
                 </select>
               </div>
               <div style={fieldRow}>
@@ -450,6 +550,79 @@ export default function CharacterForm({
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ── Roles ── */}
+        <section>
+          <p style={sectionHead}>Narrative Roles</p>
+          {/* Hidden inputs carry the selected roles to the server action */}
+          {selectedRoles.map((r) => (
+            <input key={r} type="hidden" name="roles" value={r} />
+          ))}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
+            {allRoles.map((role) => {
+              const checked = selectedRoles.includes(role);
+              const c = ROLE_BADGE_COLORS[role] ?? {
+                bg: "rgba(100,100,100,0.12)", text: "var(--color-ink-muted)", border: "var(--color-border)",
+              };
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => toggleRole(role)}
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "0.75rem",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    padding: "0.25rem 0.7rem",
+                    borderRadius: "3px",
+                    border: `1px solid ${checked ? c.border : "var(--color-border)"}`,
+                    background: checked ? c.bg : "transparent",
+                    color: checked ? c.text : "var(--color-ink-faint)",
+                    cursor: "pointer",
+                    transition: "all 0.12s",
+                  }}
+                >
+                  {role}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Custom role management — Char only */}
+          {isSuperAdmin && (
+            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "0.75rem" }}>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-ink-faint)", marginBottom: "0.5rem" }}>
+                Custom Roles
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.6rem" }}>
+                {localCustomRoles.map((r) => (
+                  <span key={r.id} style={{ display: "flex", alignItems: "center", gap: "0.3rem", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.15rem 0.4rem 0.15rem 0.6rem" }}>
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-ink-muted)" }}>{r.name}</span>
+                    <button type="button" onClick={() => handleDeleteCustomRole(r.id, r.name)} disabled={rolePending}
+                      style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--color-ink-faint)", fontSize: "0.75rem", padding: "0 0.1rem", lineHeight: 1 }}>
+                      ✕
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <form onSubmit={handleAddCustomRole} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <input
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  placeholder="New role name…"
+                  maxLength={60}
+                  style={{ ...inputStyle, flex: 1, fontSize: "0.85rem", padding: "0.35rem 0.6rem" }}
+                />
+                <button type="submit" disabled={rolePending || !newRoleName.trim()}
+                  style={{ background: !newRoleName.trim() ? "var(--color-border)" : "var(--color-crimson)", border: "none", borderRadius: "3px", padding: "0.35rem 0.8rem", color: "var(--color-ink)", fontFamily: "var(--font-body)", fontSize: "0.82rem", cursor: !newRoleName.trim() ? "default" : "pointer", whiteSpace: "nowrap" }}>
+                  {rolePending ? "…" : "Add"}
+                </button>
+              </form>
+              {roleError && <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "#d4848e", marginTop: "0.4rem" }}>{roleError}</p>}
+            </div>
+          )}
         </section>
 
         {/* ── Appearance ── */}

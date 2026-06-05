@@ -17,8 +17,8 @@ async function main() {
   // Only the initial create sets the password, so re-deploys never wipe changes.
   await prisma.user.upsert({
     where: { username: "Char" },
-    update: {},
-    create: { username: "Char", password: hashed },
+    update: { isSuperAdmin: true },
+    create: { username: "Char", password: hashed, isSuperAdmin: true },
   });
 
   console.log("✓ Admin account ready:");

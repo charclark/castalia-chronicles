@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 export type SessionPayload = {
   userId: string;
   username: string;
+  isSuperAdmin: boolean;
 };
 
 function getEncodedKey() {
@@ -60,5 +61,8 @@ export async function deleteSession(): Promise<void> {
 export async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get("session")?.value;
-  return decryptSession(token);
+  const payload = await decryptSession(token);
+  if (!payload) return null;
+  // Back-compat: sessions created before isSuperAdmin was added default to false
+  return { ...payload, isSuperAdmin: payload.isSuperAdmin ?? false };
 }

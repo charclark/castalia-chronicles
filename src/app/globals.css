@@ -167,6 +167,7 @@ a:hover { color: var(--color-gold-dim); }
   outline: none;
   min-height: 60vh;
   padding-bottom: 8rem;
+  padding-left: 1.2rem; /* room for flag icons in left margin */
 }
 
 .tiptap-writing-area .tiptap p {
@@ -231,4 +232,62 @@ a:hover { color: var(--color-gold-dim); }
   pointer-events: none;
   float: left;
   height: 0;
+}
+
+/* Underline, highlight, strikethrough from TipTap extensions */
+.tiptap-writing-area .tiptap u {
+  text-decoration: underline;
+}
+.tiptap-writing-area .tiptap s {
+  text-decoration: line-through;
+  color: var(--color-ink-faint);
+}
+.tiptap-writing-area mark,
+.tiptap-readonly mark {
+  background-color: rgba(253, 224, 71, 0.35);
+  border-radius: 2px;
+  color: inherit;
+  padding: 0 1px;
+}
+
+/* Flag markers in the writing editor margin */
+.flag-widget {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  overflow: visible;
+  user-select: none;
+  pointer-events: none;
+}
+.flag-icon {
+  position: absolute;
+  right: 0.35rem;
+  top: 0.05em;
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: all;
+  cursor: default;
+  white-space: nowrap;
+  opacity: 0.9;
+}
+
+/* Flagged range highlight in the editor */
+.flag-range--yellow {
+  background: rgba(201, 168, 76, 0.13);
+  border-bottom: 1px solid rgba(201, 168, 76, 0.45);
+}
+.flag-range--red {
+  background: rgba(180, 40, 40, 0.13);
+  border-bottom: 1px solid rgba(180, 40, 40, 0.45);
+}
+
+/* Search result highlights */
+.search-match {
+  background-color: rgba(253, 224, 71, 0.35);
+  border-radius: 2px;
+}
+.search-match--current {
+  background-color: rgba(251, 146, 60, 0.55);
+  outline: 1px solid rgba(251, 146, 60, 0.8);
+  border-radius: 2px;
 }

@@ -15,11 +15,25 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  // Universe selector data
-  const universes = await prisma.universe.findMany({
-    orderBy: { createdAt: "asc" },
-    select: { id: true, name: true },
-  });
+  // Universe selector — archived universes never appear in the sidebar/selector.
+  // Super-admin sees all active universes; others see their own + shared ones.
+  const universes = session.isSuperAdmin
+    ? await prisma.universe.findMany({
+        where: { archivedAt: null },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true },
+      })
+    : await prisma.universe.findMany({
+        where: {
+          archivedAt: null,
+          OR: [
+            { createdByUserId: session.userId },
+            { isPrivate: false, accesses: { some: { userId: session.userId } } },
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, name: true },
+      });
 
   const cookieStore = await cookies();
   const cookieId = cookieStore.get("selected-universe")?.value ?? null;
@@ -49,7 +63,10 @@ export default async function AdminLayout({
         prisma.character.findMany({
           where: { universeId: currentUniverseId },
           orderBy: { name: "asc" },
-          select: { id: true, name: true, characterType: true, notes: true, createdAt: true },
+          select: {
+            id: true, name: true, characterType: true, notes: true, createdAt: true,
+            roles: { select: { role: true } },
+          },
         }),
         prisma.location.findMany({
           where: { universeId: currentUniverseId },

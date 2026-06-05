@@ -8,17 +8,22 @@ function stripHtml(html: string): string {
 }
 
 export default async function FreeReadPage() {
-  const works = await prisma.work.findMany({
-    where: { status: "published", publishMode: "whole" },
-    orderBy: { publishedAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      type: true,
-      content: true,
-      publishedAt: true,
-    },
-  });
+  let works: { id: string; title: string; type: string; content: string | null; publishedAt: Date | null }[] = [];
+  try {
+    works = await prisma.work.findMany({
+      where: { status: "published", publishMode: "whole" },
+      orderBy: { publishedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        content: true,
+        publishedAt: true,
+      },
+    });
+  } catch {
+    // DB unavailable in local dev — render empty state
+  }
 
   return (
     <main

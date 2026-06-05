@@ -1,24 +1,18 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { requireUniverseEdit } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { getCurrentUniverseId } from "@/lib/universe";
 
 export type ImageState = { error?: string; success?: string } | null;
 
-async function auth() {
-  const session = await getSession();
-  if (!session) throw new Error("Not authenticated.");
-}
 
 export async function uploadImage(
   _prev: ImageState,
   formData: FormData
 ): Promise<ImageState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
 
   const file = formData.get("file") as File | null;
   const label = (formData.get("label") as string)?.trim();
@@ -44,8 +38,7 @@ export async function updateImage(
   _prev: ImageState,
   formData: FormData
 ): Promise<ImageState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const id = formData.get("id") as string;
   const label = (formData.get("label") as string)?.trim();
   const category = (formData.get("category") as string) || "other";
@@ -64,8 +57,7 @@ export async function updateImage(
 }
 
 export async function deleteImage(id: string): Promise<void> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.image.findFirst({ where: { id, universeId } });
   if (!existing) return;
   await prisma.image.delete({ where: { id } });

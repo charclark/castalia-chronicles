@@ -65,7 +65,7 @@ export default function AdminNav({
             whiteSpace: "nowrap",
           }}
         >
-          The Castalia Chronicles
+          WriteWright
           <span
             style={{
               fontSize: "0.65rem",

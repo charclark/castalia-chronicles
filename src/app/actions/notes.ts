@@ -1,24 +1,18 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { requireUniverseEdit } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { getCurrentUniverseId } from "@/lib/universe";
 
 export type NoteState = { error?: string; success?: string } | null;
 
-async function auth() {
-  const session = await getSession();
-  if (!session) throw new Error("Not authenticated.");
-}
 
 export async function createNote(
   _prev: NoteState,
   formData: FormData
 ): Promise<NoteState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const title = (formData.get("title") as string)?.trim();
   const content = (formData.get("content") as string)?.trim() || null;
 
@@ -33,8 +27,7 @@ export async function updateNote(
   _prev: NoteState,
   formData: FormData
 ): Promise<NoteState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const id = formData.get("id") as string;
   const title = (formData.get("title") as string)?.trim();
   const content = (formData.get("content") as string)?.trim() || null;
@@ -51,8 +44,7 @@ export async function updateNote(
 }
 
 export async function deleteNote(id: string): Promise<void> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.note.findFirst({ where: { id, universeId } });
   if (!existing) return;
   await prisma.note.delete({ where: { id } });

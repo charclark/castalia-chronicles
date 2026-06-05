@@ -41,12 +41,23 @@ export default function AddUserForm() {
           fontSize: "1.2rem",
           fontWeight: 400,
           color: "var(--color-gold)",
-          marginBottom: "1.25rem",
+          marginBottom: "0.5rem",
           letterSpacing: "0.04em",
         }}
       >
         Add New User
       </h3>
+      <p
+        style={{
+          fontFamily: "var(--font-body)",
+          fontSize: "0.82rem",
+          color: "var(--color-ink-faint)",
+          fontStyle: "italic",
+          marginBottom: "1.25rem",
+        }}
+      >
+        Passwords must be 8+ characters with at least one uppercase letter, one number, and one special character.
+      </p>
 
       {state?.error && (
         <div

@@ -14,28 +14,37 @@ export default async function CharacterPage({
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) notFound();
 
-  const [character, allCharsRaw, relationships] = await Promise.all([
-    prisma.character.findFirst({ where: { id, universeId } }),
-
-    // All other characters in the universe (for the relationship dropdown)
-    prisma.character.findMany({
-      where: { universeId, NOT: { id } },
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
-    }),
-
-    // All relationships involving this character (as from OR to)
-    prisma.characterRelationship.findMany({
-      where: {
-        OR: [{ fromCharacterId: id }, { toCharacterId: id }],
-      },
-      include: {
-        fromCharacter: { select: { id: true, name: true } },
-        toCharacter:   { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-  ]);
+  const [character, allCharsRaw, relationships, speciesRows, customRoleRows, session] =
+    await Promise.all([
+      prisma.character.findFirst({
+        where: { id, universeId },
+        include: { roles: { select: { role: true } } },
+      }),
+      prisma.character.findMany({
+        where: { universeId, NOT: { id } },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+      prisma.characterRelationship.findMany({
+        where: { OR: [{ fromCharacterId: id }, { toCharacterId: id }] },
+        include: {
+          fromCharacter: { select: { id: true, name: true } },
+          toCharacter:   { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.species.findMany({
+        where: { universeId },
+        orderBy: { name: "asc" },
+        select: { name: true },
+      }),
+      prisma.customRole.findMany({
+        where: { universeId },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      }),
+      import("@/lib/session").then((m) => m.getSession()),
+    ]);
 
   if (!character) notFound();
 
@@ -44,6 +53,11 @@ export default async function CharacterPage({
       character={character}
       allChars={allCharsRaw}
       relationships={relationships}
+      customSpecies={speciesRows.map((s) => s.name)}
+      currentRoles={character.roles.map((r) => r.role)}
+      customRoles={customRoleRows}
+      isSuperAdmin={session?.isSuperAdmin ?? false}
+      universeId={universeId}
     />
   );
 }

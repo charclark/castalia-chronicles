@@ -106,7 +106,7 @@ export default function PublicFooter() {
               fontStyle: "italic",
             }}
           >
-            The Castalia Chronicles
+            WriteWright
           </p>
         </div>
       </div>

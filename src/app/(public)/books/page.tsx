@@ -13,20 +13,25 @@ function parseBuyLinks(json: string | null): BuyLink[] {
 }
 
 export default async function BooksPage() {
-  const books = await prisma.work.findMany({
-    where: { type: "book", status: "published" },
-    orderBy: { publishedAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      publishMode: true,
-      snippet: true,
-      coverImageId: true,
-      description: true,
-      buyLinks: true,
-      publishedAt: true,
-    },
-  });
+  let books: { id: string; title: string; publishMode: string | null; snippet: string | null; coverImageId: string | null; description: string | null; buyLinks: string | null; publishedAt: Date | null }[] = [];
+  try {
+    books = await prisma.work.findMany({
+      where: { type: "book", status: "published" },
+      orderBy: { publishedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        publishMode: true,
+        snippet: true,
+        coverImageId: true,
+        description: true,
+        buyLinks: true,
+        publishedAt: true,
+      },
+    });
+  } catch {
+    // DB unavailable in local dev — render empty state
+  }
 
   return (
     <main

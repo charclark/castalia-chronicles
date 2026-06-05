@@ -8,12 +8,20 @@ import {
   deleteUniverse,
   switchUniverse,
 } from "@/app/actions/universe";
+import UniverseAccessPanel from "./UniverseAccessPanel";
+import DestroyUniverseConfirm from "@/components/DestroyUniverseConfirm";
+
+type AccessEntry = { userId: string; username: string; permission: "view" | "edit" };
+type OtherUser = { id: string; username: string };
 
 type Universe = {
   id: string;
   name: string;
   description: string | null;
+  isPrivate: boolean;
+  createdByUserId: string | null;
   createdAt: Date;
+  accesses?: { userId: string; permission: string; user: { id: string; username: string } }[];
 };
 
 const card: React.CSSProperties = {
@@ -181,27 +189,31 @@ function UniverseCard({
   universe,
   isActive,
   onActivate,
+  isSuperAdmin,
+  currentUserId,
+  otherUsers,
 }: {
   universe: Universe;
   isActive: boolean;
   onActivate: (id: string) => void;
+  isSuperAdmin: boolean;
+  currentUserId: string;
+  otherUsers: OtherUser[];
 }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(universe.name);
+  const [showDestroyConfirm, setShowDestroyConfirm] = useState(false);
   const [renameState, renameAction, renamePending] = useActionState(
     renameUniverse,
     null
   );
   const [deletePending, startDelete] = useTransition();
 
-  function handleDelete() {
-    if (
-      !window.confirm(
-        `Delete "${universe.name}"?\n\nThis will permanently remove the universe and all data within it. This cannot be undone.`
-      )
-    )
-      return;
+  const isOwner = universe.createdByUserId === currentUserId;
+  const canDelete = isSuperAdmin || isOwner;
 
+  function handleDeleteConfirmed() {
+    setShowDestroyConfirm(false);
     startDelete(async () => {
       await deleteUniverse(universe.id);
     });
@@ -355,24 +367,51 @@ function UniverseCard({
                 Set Active
               </button>
             )}
-            <button type="button" onClick={() => setEditing(true)} style={btnGhost}>
-              Rename
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deletePending}
-              style={{
-                ...btnGhost,
-                color: "#d4848e",
-                borderColor: "var(--color-crimson-dim)",
-              }}
-            >
-              {deletePending ? "Deleting…" : "Delete"}
-            </button>
+            {isSuperAdmin && (
+              <button type="button" onClick={() => setEditing(true)} style={btnGhost}>
+                Rename
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => setShowDestroyConfirm(true)}
+                disabled={deletePending}
+                style={{
+                  ...btnGhost,
+                  color: "#d4848e",
+                  borderColor: "var(--color-crimson-dim)",
+                }}
+              >
+                {deletePending ? "Deleting…" : "Delete"}
+              </button>
+            )}
           </div>
         )}
       </div>
+
+      {/* Universe access panel — only visible to super-admin */}
+      {isSuperAdmin && (
+        <UniverseAccessPanel
+          universeId={universe.id}
+          isPrivate={universe.isPrivate}
+          accesses={(universe.accesses ?? []).map((a) => ({
+            userId: a.userId,
+            username: a.user.username,
+            permission: a.permission as "view" | "edit",
+          }))}
+          otherUsers={otherUsers}
+        />
+      )}
+
+      {/* Two-step destroy confirmation */}
+      {showDestroyConfirm && (
+        <DestroyUniverseConfirm
+          universeName={universe.name}
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setShowDestroyConfirm(false)}
+        />
+      )}
     </div>
   );
 }
@@ -382,9 +421,15 @@ function UniverseCard({
 export default function UniverseManager({
   universes: initialUniverses,
   selectedId,
+  isSuperAdmin,
+  currentUserId,
+  otherUsers,
 }: {
   universes: Universe[];
   selectedId: string | null;
+  isSuperAdmin: boolean;
+  currentUserId: string;
+  otherUsers: OtherUser[];
 }) {
   const router = useRouter();
   const [switching, startSwitch] = useTransition();
@@ -403,7 +448,7 @@ export default function UniverseManager({
 
   return (
     <div>
-      <CreateUniverseForm />
+      {isSuperAdmin && <CreateUniverseForm />}
 
       {initialUniverses.length === 0 ? (
         <div
@@ -444,6 +489,9 @@ export default function UniverseManager({
               universe={u}
               isActive={u.id === activeId}
               onActivate={handleActivate}
+              isSuperAdmin={isSuperAdmin}
+              currentUserId={currentUserId}
+              otherUsers={otherUsers}
             />
           ))}
         </div>

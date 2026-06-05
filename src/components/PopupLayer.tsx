@@ -3,6 +3,7 @@
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import ConnectionsMap from "./ConnectionsMap";
+import { RoleBadges } from "@/app/admin/characters/[id]/CharacterForm";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ type CharacterEntry = {
   characterType: string;
   notes?: string | null;
   createdAt: Date;
+  roles?: { role: string }[];
 };
 
 type LocationEntry = {
@@ -108,7 +110,7 @@ function CharacterCard({ char, href }: { char: CharacterEntry; href: string }) {
       onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
       onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
     >
-      <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem", marginBottom: "0.35rem", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "0.6rem", marginBottom: char.roles?.length ? "0.4rem" : "0.35rem", flexWrap: "wrap" }}>
         <h3
           style={{
             fontFamily: "var(--font-heading)",
@@ -134,6 +136,11 @@ function CharacterCard({ char, href }: { char: CharacterEntry; href: string }) {
           {char.characterType}
         </span>
       </div>
+      {char.roles && char.roles.length > 0 && (
+        <div style={{ marginBottom: "0.4rem" }}>
+          <RoleBadges roles={char.roles.map((r) => r.role)} />
+        </div>
+      )}
       {char.notes && (
         <p
           style={{

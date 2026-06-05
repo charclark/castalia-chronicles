@@ -8,12 +8,32 @@ export default async function NewCharacterPage() {
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) notFound();
 
-  // Other characters for the relationships dropdown (empty on new character)
-  const allChars = await prisma.character.findMany({
-    where: { universeId },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true },
-  });
+  const [allChars, speciesRows, customRoleRows, session] = await Promise.all([
+    prisma.character.findMany({
+      where: { universeId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.species.findMany({
+      where: { universeId },
+      orderBy: { name: "asc" },
+      select: { name: true },
+    }),
+    prisma.customRole.findMany({
+      where: { universeId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    import("@/lib/session").then((m) => m.getSession()),
+  ]);
 
-  return <CharacterForm allChars={allChars} />;
+  return (
+    <CharacterForm
+      allChars={allChars}
+      customSpecies={speciesRows.map((s) => s.name)}
+      customRoles={customRoleRows}
+      isSuperAdmin={session?.isSuperAdmin ?? false}
+      universeId={universeId}
+    />
+  );
 }

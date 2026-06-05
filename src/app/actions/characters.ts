@@ -3,15 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { getCurrentUniverseId } from "@/lib/universe";
+import { requireUniverseEdit } from "@/lib/auth-utils";
 
 export type CharacterState = { error?: string; success?: string } | null;
-
-async function auth() {
-  const session = await getSession();
-  if (!session) throw new Error("Not authenticated.");
-}
 
 // ── CRUD ────────────────────────────────────────────────────────────────────
 
@@ -19,11 +13,12 @@ export async function createCharacter(
   _prev: CharacterState,
   formData: FormData
 ): Promise<CharacterState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
 
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Name is required." };
+
+  const roles = formData.getAll("roles") as string[];
 
   const character = await prisma.character.create({
     data: {
@@ -45,6 +40,9 @@ export async function createCharacter(
       jobs:          (formData.get("jobs") as string)?.trim() || null,
       pets:          (formData.get("pets") as string)?.trim() || null,
       notes:         (formData.get("notes") as string)?.trim() || null,
+      roles: roles.length > 0
+        ? { createMany: { data: roles.map((role) => ({ role })), skipDuplicates: true } }
+        : undefined,
     },
   });
 
@@ -55,8 +53,7 @@ export async function updateCharacter(
   _prev: CharacterState,
   formData: FormData
 ): Promise<CharacterState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
 
@@ -66,28 +63,39 @@ export async function updateCharacter(
   const existing = await prisma.character.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Character not found." };
 
-  await prisma.character.update({
-    where: { id },
-    data: {
-      name,
-      characterType: (formData.get("characterType") as string) || "Human",
-      subtype:       (formData.get("subtype") as string)?.trim() || null,
-      hairColor:     (formData.get("hairColor") as string)?.trim() || null,
-      eyeColor:      (formData.get("eyeColor") as string)?.trim() || null,
-      bodyType:      (formData.get("bodyType") as string)?.trim() || null,
-      attitude:      (formData.get("attitude") as string)?.trim() || null,
-      quirks:        (formData.get("quirks") as string)?.trim() || null,
-      speakingStyle: (formData.get("speakingStyle") as string)?.trim() || null,
-      phrases:       (formData.get("phrases") as string)?.trim() || null,
-      origin:        (formData.get("origin") as string)?.trim() || null,
-      livesIn:       (formData.get("livesIn") as string)?.trim() || null,
-      homeDescription:(formData.get("homeDescription") as string)?.trim() || null,
-      vehicles:      (formData.get("vehicles") as string)?.trim() || null,
-      jobs:          (formData.get("jobs") as string)?.trim() || null,
-      pets:          (formData.get("pets") as string)?.trim() || null,
-      notes:         (formData.get("notes") as string)?.trim() || null,
-    },
-  });
+  const roles = formData.getAll("roles") as string[];
+
+  await prisma.$transaction([
+    prisma.character.update({
+      where: { id },
+      data: {
+        name,
+        characterType: (formData.get("characterType") as string) || "Human",
+        subtype:       (formData.get("subtype") as string)?.trim() || null,
+        hairColor:     (formData.get("hairColor") as string)?.trim() || null,
+        eyeColor:      (formData.get("eyeColor") as string)?.trim() || null,
+        bodyType:      (formData.get("bodyType") as string)?.trim() || null,
+        attitude:      (formData.get("attitude") as string)?.trim() || null,
+        quirks:        (formData.get("quirks") as string)?.trim() || null,
+        speakingStyle: (formData.get("speakingStyle") as string)?.trim() || null,
+        phrases:       (formData.get("phrases") as string)?.trim() || null,
+        origin:        (formData.get("origin") as string)?.trim() || null,
+        livesIn:       (formData.get("livesIn") as string)?.trim() || null,
+        homeDescription:(formData.get("homeDescription") as string)?.trim() || null,
+        vehicles:      (formData.get("vehicles") as string)?.trim() || null,
+        jobs:          (formData.get("jobs") as string)?.trim() || null,
+        pets:          (formData.get("pets") as string)?.trim() || null,
+        notes:         (formData.get("notes") as string)?.trim() || null,
+      },
+    }),
+    prisma.characterRole.deleteMany({ where: { characterId: id } }),
+    ...(roles.length > 0
+      ? [prisma.characterRole.createMany({
+          data: roles.map((role) => ({ characterId: id, role })),
+          skipDuplicates: true,
+        })]
+      : []),
+  ]);
 
   revalidatePath(`/admin/characters/${id}`);
   revalidatePath("/admin", "layout");
@@ -95,8 +103,7 @@ export async function updateCharacter(
 }
 
 export async function deleteCharacter(id: string): Promise<void> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.character.findFirst({ where: { id, universeId } });
   if (!existing) return;
   await prisma.character.delete({ where: { id } });
@@ -112,8 +119,7 @@ export async function addRelationship(
   type: string,
   note: string
 ): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
 
   if (!fromCharacterId || !toCharacterId) return { error: "Both characters required." };
   if (fromCharacterId === toCharacterId) return { error: "A character cannot relate to themselves." };
@@ -140,7 +146,7 @@ export async function addRelationship(
 }
 
 export async function removeRelationship(id: string, characterId: string): Promise<void> {
-  await auth();
+  await requireUniverseEdit();
   await prisma.characterRelationship.delete({ where: { id } }).catch(() => null);
   revalidatePath(`/admin/characters/${characterId}`);
 }

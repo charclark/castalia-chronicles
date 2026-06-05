@@ -12,7 +12,7 @@ export async function GET(_req: NextRequest) {
   if (!universeId)
     return new NextResponse("No universe selected", { status: 400 });
 
-  const [characters, relationships] = await Promise.all([
+  const [characters, relationships, species, charRolesRaw] = await Promise.all([
     prisma.character.findMany({
       where: { universeId },
       orderBy: { name: "asc" },
@@ -28,7 +28,22 @@ export async function GET(_req: NextRequest) {
         note: true,
       },
     }),
+    prisma.species.findMany({
+      where: { universeId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true, shape: true },
+    }),
+    prisma.characterRole.findMany({
+      where: { character: { universeId } },
+      select: { characterId: true, role: true },
+    }),
   ]);
 
-  return NextResponse.json({ characters, relationships });
+  // Build a map: characterId -> string[]
+  const charRoles: Record<string, string[]> = {};
+  for (const { characterId, role } of charRolesRaw) {
+    (charRoles[characterId] ??= []).push(role);
+  }
+
+  return NextResponse.json({ characters, relationships, species, charRoles });
 }

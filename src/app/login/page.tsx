@@ -209,7 +209,7 @@ export default function LoginPage() {
           textAlign: "center",
         }}
       >
-        The Castalia Chronicles
+        WriteWright
       </h1>
       <p
         style={{

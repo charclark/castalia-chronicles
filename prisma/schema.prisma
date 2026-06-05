@@ -13,30 +13,70 @@ datasource db {
 
 // --- User model (authentication) ---
 // Visitors never log in; only admin users do.
+// isSuperAdmin: true only for Char — bypasses password rules and has full access.
 model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String           @id @default(cuid())
+  username         String           @unique
+  password         String
+  isSuperAdmin     Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  universeAccess   UniverseAccess[]
+  createdUniverses Universe[]       @relation("UniverseCreator")
+  archivedUniverses Universe[]      @relation("UniverseArchiver")
 }
 
 // --- Universe ---
 // One per book series. All story-bible data belongs to exactly one universe
 // via universeId foreign key. Universes are fully isolated.
+// isPrivate: true = only Char can see it; false = can be shared with other users.
+// createdByUserId: null = created by Char (pre-ownership) or Char herself.
+// archivedAt/archivedByUserId: set when a non-super-admin "deletes" their universe
+// (archived universes are hidden from all users except Char).
 model Universe {
-  id             String          @id @default(cuid())
-  name           String
-  description    String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  storylineIdeas StorylineIdea[]
-  notes          Note[]
-  plotItems      PlotItem[]
-  characters     Character[]
-  locations      Location[]
-  images         Image[]
-  works          Work[]
+  id               String           @id @default(cuid())
+  name             String
+  description      String?
+  isPrivate        Boolean          @default(true)
+  createdByUserId  String?
+  createdBy        User?            @relation("UniverseCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  archivedAt       DateTime?
+  archivedByUserId String?
+  archivedBy       User?            @relation("UniverseArchiver", fields: [archivedByUserId], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  storylineIdeas   StorylineIdea[]
+  notes            Note[]
+  plotItems        PlotItem[]
+  characters       Character[]
+  locations        Location[]
+  images           Image[]
+  works            Work[]
+  accesses         UniverseAccess[]
+  species          Species[]
+  customRoles      CustomRole[]
+
+  @@index([createdByUserId])
+  @@index([archivedAt])
+}
+
+// --- Universe Access ---
+// Grants a non-super-admin user access to a specific universe.
+// permission: "view" = read-only; "edit" = read and write.
+// Only created/modified/deleted by the super-admin.
+model UniverseAccess {
+  id          String   @id @default(cuid())
+  universeId  String
+  universe    Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission  String   // "view" | "edit"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([universeId, userId])
+  @@index([universeId])
+  @@index([userId])
 }
 
 // --- Characters ---
@@ -82,9 +122,37 @@ model Character {
   relFrom         CharacterRelationship[] @relation("RelFrom")
   relTo           CharacterRelationship[] @relation("RelTo")
 
+  // Narrative roles (see CharacterRole)
+  roles           CharacterRole[]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  @@index([universeId])
+}
+
+// --- Character Roles ---
+// Each row assigns one role name to one character.
+// Role names are either from the default list or from CustomRole.
+model CharacterRole {
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  role        String    // e.g. "Protagonist", "Supporting", or a custom role name
+
+  @@id([characterId, role])
+  @@index([characterId])
+}
+
+// --- Custom Roles ---
+// Role names added by the super-admin beyond the built-in defaults.
+model CustomRole {
+  id         String   @id @default(cuid())
+  universeId String
+  universe   Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime @default(now())
+
+  @@unique([universeId, name])
   @@index([universeId])
 }
 
@@ -251,7 +319,69 @@ model Work {
   openCount    Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  chapters     Chapter[]
+  flags        Flag[]
 
   @@index([universeId])
   @@index([coverImageId])
+}
+
+// --- Species ---
+// Custom species beyond the built-in defaults (Human, Vampire, etc.).
+// Stored per universe. Defaults are hardcoded client-side.
+// color: hex string (e.g. "#9e4a6c"); shape: "circle"|"triangle"|"diamond"|"square"
+model Species {
+  id         String   @id @default(cuid())
+  universeId String
+  universe   Universe @relation(fields: [universeId], references: [id], onDelete: Cascade)
+  name       String
+  color      String
+  shape      String   // "circle" | "triangle" | "diamond" | "square"
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([universeId, name])
+  @@index([universeId])
+}
+
+// --- Chapters ---
+// A work is divided into chapters. order is 0-based and used for display ordering.
+// content stores TipTap HTML; null until first keystroke in that chapter.
+// When a work's editor is opened for the first time after this feature was added,
+// the server seeds one chapter from Work.content (may be null/empty).
+model Chapter {
+  id        String   @id @default(cuid())
+  workId    String
+  work      Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+  title     String   @default("Chapter 1")
+  content   String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flags     Flag[]
+
+  @@index([workId])
+  @@index([workId, order])
+}
+
+// --- Writing Flags ---
+// Inline annotations placed by the author on specific text spans within a chapter.
+// fromOffset / toOffset are plain-text character offsets within the chapter content.
+// color: "yellow" = revisit, "red" = urgent fix.
+// snippet: the flagged text (up to 100 chars) for display in the flag list.
+model Flag {
+  id          String   @id @default(cuid())
+  workId      String
+  work        Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+  chapterId   String
+  chapter     Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  color       String   // "yellow" | "red"
+  fromOffset  Int
+  toOffset    Int
+  snippet     String
+  createdAt   DateTime @default(now())
+
+  @@index([workId])
+  @@index([chapterId])
 }

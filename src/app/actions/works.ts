@@ -1,23 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { requireUniverseEdit } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { getCurrentUniverseId } from "@/lib/universe";
 
 export type WorkState = { error?: string; success?: string } | null;
 
-async function auth() {
-  const session = await getSession();
-  if (!session) throw new Error("Not authenticated.");
-}
 
 export async function createWork(
   type: "book" | "short story"
 ): Promise<void> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
 
   const title = type === "book" ? "Untitled Book" : "Untitled Short Story";
 
@@ -32,8 +26,7 @@ export async function renameWork(
   _prev: WorkState,
   formData: FormData
 ): Promise<WorkState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const id = formData.get("id") as string;
   const title = (formData.get("title") as string)?.trim();
 
@@ -55,8 +48,7 @@ export async function setCoverImage(
   _prev: WorkState,
   formData: FormData
 ): Promise<WorkState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const id = formData.get("id") as string;
   const coverImageId = (formData.get("coverImageId") as string) || null;
 
@@ -81,8 +73,7 @@ export async function saveWorkContent(
   id: string,
   content: string
 ): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
   await prisma.work.update({ where: { id }, data: { content } });
@@ -94,8 +85,7 @@ export async function publishWork(
   mode: "whole" | "snippet",
   snippet?: string
 ): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
 
@@ -124,8 +114,7 @@ export async function publishWork(
 }
 
 export async function unpublishWork(id: string): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
 
@@ -146,8 +135,7 @@ export async function updateSnippet(
   id: string,
   snippetText: string
 ): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
 
@@ -164,8 +152,7 @@ export async function saveWorkDescription(
   id: string,
   description: string
 ): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
   await prisma.work.update({ where: { id }, data: { description: description.trim() || null } });
@@ -179,8 +166,7 @@ export async function saveBuyLinks(
   id: string,
   buyLinksJson: string
 ): Promise<{ error?: string }> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return { error: "Work not found." };
   await prisma.work.update({ where: { id }, data: { buyLinks: buyLinksJson || null } });
@@ -200,8 +186,7 @@ export async function incrementOpenCount(id: string): Promise<void> {
 }
 
 export async function deleteWork(id: string): Promise<void> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.work.findFirst({ where: { id, universeId } });
   if (!existing) return;
   await prisma.work.delete({ where: { id } });

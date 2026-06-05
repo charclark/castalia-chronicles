@@ -52,7 +52,7 @@ export default function PublicNav() {
             flexShrink: 0,
           }}
         >
-          The Castalia Chronicles
+          WriteWright
         </Link>
 
         {/* Nav links — wrap gracefully on small screens, never collapse to hamburger */}

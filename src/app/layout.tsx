@@ -19,8 +19,8 @@ const ebGaramond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "The Castalia Chronicles",
-  description: "Tales of the immortal and the untamed — by Alexandra Castalia",
+  title: "WriteWright",
+  description: "Every universe begins with a single word",
 };
 
 export default function RootLayout({

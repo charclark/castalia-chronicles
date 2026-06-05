@@ -1,24 +1,18 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { requireUniverseEdit } from "@/lib/auth-utils";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
-import { getCurrentUniverseId } from "@/lib/universe";
 
 export type LocationState = { error?: string; success?: string } | null;
 
-async function auth() {
-  const session = await getSession();
-  if (!session) throw new Error("Not authenticated.");
-}
 
 export async function createLocation(
   _prev: LocationState,
   formData: FormData
 ): Promise<LocationState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
 
   const name = (formData.get("name") as string)?.trim();
   if (!name) return { error: "Name is required." };
@@ -42,8 +36,7 @@ export async function updateLocation(
   _prev: LocationState,
   formData: FormData
 ): Promise<LocationState> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
 
@@ -71,8 +64,7 @@ export async function updateLocation(
 }
 
 export async function deleteLocation(id: string): Promise<void> {
-  await auth();
-  const universeId = await getCurrentUniverseId();
+  const { universeId } = await requireUniverseEdit();
   const existing = await prisma.location.findFirst({ where: { id, universeId } });
   if (!existing) return;
   await prisma.location.delete({ where: { id } });
