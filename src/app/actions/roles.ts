@@ -3,17 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireSuperAdmin, requireUniverseEdit } from "@/lib/auth-utils";
-
-export const DEFAULT_ROLES = [
-  "Protagonist",
-  "Antagonist",
-  "Principal",
-  "Supporting",
-  "Wildcard",
-  "Catalyst",
-  "Shadow",
-  "Minor",
-] as const;
+import { DEFAULT_ROLES } from "@/lib/roles-constants";
 
 export async function createCustomRole(
   universeId: string,

@@ -10,7 +10,8 @@ import {
   addRelationship,
   removeRelationship,
 } from "@/app/actions/characters";
-import { createCustomRole, deleteCustomRole, DEFAULT_ROLES } from "@/app/actions/roles";
+import { createCustomRole, deleteCustomRole } from "@/app/actions/roles";
+import { DEFAULT_ROLES } from "@/lib/roles-constants";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
