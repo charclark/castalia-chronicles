@@ -390,6 +390,52 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
         onWordClick={() => openPopup("images")}
         entryHref={(id) => `/admin/images/${id}`}
       />
+
+      {/* Divider */}
+      <div style={{ height: "1px", background: "var(--color-border)", margin: "0.75rem 0.75rem 0.5rem" }} />
+
+      {/* Universe backup */}
+      <div style={{ padding: "0.25rem 1rem 0.75rem" }}>
+        <p style={{ ...sectionLabel, marginBottom: "0.5rem" }}>Story Bible Backup</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+          <a
+            href="/api/admin/backup/universe?format=json"
+            download
+            style={{
+              fontFamily: "var(--font-body)", fontSize: "0.78rem",
+              color: "var(--color-ink-faint)",
+              background: "transparent",
+              border: "1px solid var(--color-border)",
+              borderRadius: "3px", padding: "0.3rem 0.7rem",
+              textDecoration: "none",
+              transition: "border-color 0.15s, color 0.15s",
+              display: "block",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-border-light)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-ink-faint)"; }}
+          >
+            ↓ JSON backup
+          </a>
+          <a
+            href="/api/admin/backup/universe?format=docx"
+            download
+            style={{
+              fontFamily: "var(--font-body)", fontSize: "0.78rem",
+              color: "var(--color-ink-faint)",
+              background: "transparent",
+              border: "1px solid var(--color-border)",
+              borderRadius: "3px", padding: "0.3rem 0.7rem",
+              textDecoration: "none",
+              transition: "border-color 0.15s, color 0.15s",
+              display: "block",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-border-light)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
+          >
+            ↓ Word (.docx)
+          </a>
+        </div>
+      </div>
     </aside>
   );
 }

@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/admin/mailing-list", label: "Mailing List" },
   { href: "/admin/free-read-stats", label: "Read Stats" },
   { href: "/admin/about", label: "About Page" },
+  { href: "/admin/restore", label: "Restore" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/users", label: "Users" },
 ];

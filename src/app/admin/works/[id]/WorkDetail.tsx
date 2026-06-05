@@ -660,12 +660,43 @@ export default function WorkDetail({
             </span>
           </Link>
 
-          <ActionButton
-            label="Backup / Download"
-            sublabel="Export as JSON or Word"
-            variant="default"
-            disabled
-          />
+          {/* Backup — two download links */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+            <a
+              href={`/api/admin/backup/work/${work.id}?format=json`}
+              download
+              style={{
+                fontFamily: "var(--font-body)", fontSize: "0.82rem",
+                color: "var(--color-ink-muted)",
+                background: "transparent",
+                border: "1px solid var(--color-border)",
+                borderRadius: "3px", padding: "0.35rem 0.8rem",
+                textDecoration: "none", whiteSpace: "nowrap",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-border-light)"; e.currentTarget.style.color = "var(--color-ink)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
+            >
+              ↓ JSON backup
+            </a>
+            <a
+              href={`/api/admin/backup/work/${work.id}?format=docx`}
+              download
+              style={{
+                fontFamily: "var(--font-body)", fontSize: "0.82rem",
+                color: "var(--color-ink-muted)",
+                background: "transparent",
+                border: "1px solid var(--color-border)",
+                borderRadius: "3px", padding: "0.35rem 0.8rem",
+                textDecoration: "none", whiteSpace: "nowrap",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-border-light)"; e.currentTarget.style.color = "var(--color-ink)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
+            >
+              ↓ Word (.docx)
+            </a>
+          </div>
         </div>
       </div>
 
