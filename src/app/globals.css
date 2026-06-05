@@ -250,6 +250,12 @@ a:hover { color: var(--color-gold-dim); }
   padding: 0 1px;
 }
 
+/* Admin dashboard card hover — used in the Server Component dashboard page
+   where JS event handlers cannot be passed to Client Component props. */
+.admin-card-link:hover {
+  border-color: var(--color-gold-dim) !important;
+}
+
 /* Flag markers in the writing editor margin */
 .flag-widget {
   position: relative;

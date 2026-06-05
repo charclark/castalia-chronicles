@@ -152,10 +152,7 @@ export default async function AdminDashboard() {
         />
 
         {/* Writing */}
-        <Link href="/admin/works" style={cardBase}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
-        >
+        <Link href="/admin/works" style={cardBase} className="admin-card-link">
           <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Writing</h3>
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>
             {(workCount as number) > 0 ? `${workCount} work${(workCount as number) !== 1 ? "s" : ""}` : "Books & short stories"}
@@ -163,10 +160,7 @@ export default async function AdminDashboard() {
         </Link>
 
         {/* Feedback */}
-        <Link href="/admin/feedback" style={cardBase}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
-        >
+        <Link href="/admin/feedback" style={cardBase} className="admin-card-link">
           <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
             Feedback
             {(unreadFeedback as number) > 0 && (
@@ -179,10 +173,7 @@ export default async function AdminDashboard() {
         </Link>
 
         {/* Mailing List */}
-        <Link href="/admin/mailing-list" style={cardBase}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
-        >
+        <Link href="/admin/mailing-list" style={cardBase} className="admin-card-link">
           <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Mailing List</h3>
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>
             {(subCount as number) > 0 ? `${subCount} subscriber${(subCount as number) !== 1 ? "s" : ""}` : "Subscribers & export"}
@@ -190,10 +181,7 @@ export default async function AdminDashboard() {
         </Link>
 
         {/* Read Stats */}
-        <Link href="/admin/free-read-stats" style={cardBase}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
-        >
+        <Link href="/admin/free-read-stats" style={cardBase} className="admin-card-link">
           <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Read Stats</h3>
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>Free-read open counts</p>
         </Link>
@@ -255,10 +243,7 @@ function DashCard({
   }
 
   return (
-    <Link href={href} style={style}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
-    >
+    <Link href={href} style={style} className="admin-card-link">
       {inner}
     </Link>
   );
