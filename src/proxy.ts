@@ -24,24 +24,33 @@ async function isAuthenticated(request: NextRequest): Promise<boolean> {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Protect all /admin routes
-  if (pathname.startsWith("/admin")) {
-    if (!(await isAuthenticated(request))) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("from", pathname);
-      return NextResponse.redirect(loginUrl);
+  try {
+    // Protect all /admin routes
+    if (pathname.startsWith("/admin")) {
+      if (!(await isAuthenticated(request))) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("from", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+      return NextResponse.next();
+    }
+
+    // Redirect already-logged-in users away from /login
+    if (pathname === "/login") {
+      if (await isAuthenticated(request)) {
+        return NextResponse.redirect(new URL("/admin", request.url));
+      }
+    }
+
+    return NextResponse.next();
+  } catch {
+    // Fail safe: if anything goes wrong inside the proxy, protect admin routes
+    // by redirecting to login rather than accidentally allowing access.
+    if (pathname.startsWith("/admin")) {
+      return NextResponse.redirect(new URL("/login", request.url));
     }
     return NextResponse.next();
   }
-
-  // Redirect already-logged-in users away from /login
-  if (pathname === "/login") {
-    if (await isAuthenticated(request)) {
-      return NextResponse.redirect(new URL("/admin", request.url));
-    }
-  }
-
-  return NextResponse.next();
 }
 
 export const config = {

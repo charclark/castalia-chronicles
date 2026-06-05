@@ -55,7 +55,16 @@ export async function createSession(payload: SessionPayload): Promise<void> {
 
 export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete("session");
+  // Explicitly overwrite with an empty value and a past expiry so the browser
+  // always evicts the cookie. cookieStore.delete() is unreliable in some
+  // Next.js versions — it may not send the correct Set-Cookie header.
+  cookieStore.set("session", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    sameSite: "lax",
+    path: "/",
+  });
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
