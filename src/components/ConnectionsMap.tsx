@@ -40,7 +40,7 @@ const REL_COLOR: Record<string, string> = {
   enemy: "#8b2635",    // crimson
 };
 const REL_LABEL: Record<string, string> = {
-  relative: "Relative",
+  relative: "Family",
   friend: "Friend",
   enemy: "Enemy",
 };
@@ -49,6 +49,7 @@ const REL_DASH: Record<string, string> = {
   friend: "none",
   enemy: "3 3",
 };
+const CUSTOM_COLOR = "#6a7a9e"; // muted blue-grey for user-defined types
 
 // ── Force simulation (no external dependency) ─────────────────────────────────
 //
@@ -289,20 +290,16 @@ export default function ConnectionsMap() {
         onWheel={onWheel}
       >
         <defs>
-          {/* Arrow markers for each relationship type */}
+          {/* Arrow markers for known relationship types */}
           {Object.entries(REL_COLOR).map(([type, color]) => (
-            <marker
-              key={type}
-              id={`arrow-${type}`}
-              markerWidth="8"
-              markerHeight="8"
-              refX="6"
-              refY="3"
-              orient="auto"
-            >
+            <marker key={type} id={`arrow-${type}`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
               <path d="M0,0 L0,6 L8,3 z" fill={color} opacity={0.7} />
             </marker>
           ))}
+          {/* Fallback marker for custom / user-defined types */}
+          <marker id="arrow-custom" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill={CUSTOM_COLOR} opacity={0.7} />
+          </marker>
         </defs>
 
         <g transform={`translate(${transform.x},${transform.y}) scale(${transform.scale})`}>
@@ -321,8 +318,10 @@ export default function ConnectionsMap() {
             const x2 = b.x - (dx / dist) * (NODE_R + 10);
             const y2 = b.y - (dy / dist) * (NODE_R + 10);
 
-            const color = REL_COLOR[e.type] ?? "#666";
+            const isKnown = e.type in REL_COLOR;
+            const color = isKnown ? REL_COLOR[e.type] : CUSTOM_COLOR;
             const dash = REL_DASH[e.type] ?? "none";
+            const markerKey = isKnown ? e.type : "custom";
 
             return (
               <g key={e.id}>
@@ -332,7 +331,7 @@ export default function ConnectionsMap() {
                   strokeWidth={1.8}
                   strokeDasharray={dash}
                   strokeOpacity={0.65}
-                  markerEnd={`url(#arrow-${e.type})`}
+                  markerEnd={`url(#arrow-${markerKey})`}
                 />
                 {/* Invisible wider hit area for tooltip */}
                 {e.note && (
@@ -447,21 +446,21 @@ export default function ConnectionsMap() {
         {Object.entries(REL_LABEL).map(([type, label]) => (
           <div key={type} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <svg width={32} height={10}>
-              <line
-                x1={0} y1={5} x2={28} y2={5}
-                stroke={REL_COLOR[type]}
-                strokeWidth={2}
-                strokeDasharray={REL_DASH[type]}
-                opacity={0.8}
-              />
+              <line x1={0} y1={5} x2={28} y2={5} stroke={REL_COLOR[type]} strokeWidth={2} strokeDasharray={REL_DASH[type]} opacity={0.8} />
             </svg>
-            <span style={{
-              fontFamily: "var(--font-body)",
-              fontSize: "0.72rem",
-              letterSpacing: "0.08em",
-              color: "var(--color-ink-muted)",
-            }}>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", letterSpacing: "0.08em", color: "var(--color-ink-muted)" }}>
               {label}
+            </span>
+          </div>
+        ))}
+        {/* Custom types present in the current data */}
+        {[...new Set(edges.map((e) => e.type).filter((t) => !(t in REL_COLOR)))].sort().map((type) => (
+          <div key={type} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <svg width={32} height={10}>
+              <line x1={0} y1={5} x2={28} y2={5} stroke={CUSTOM_COLOR} strokeWidth={2} opacity={0.8} />
+            </svg>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", letterSpacing: "0.08em", color: "var(--color-ink-muted)", textTransform: "capitalize" }}>
+              {type}
             </span>
           </div>
         ))}

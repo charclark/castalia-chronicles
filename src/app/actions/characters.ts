@@ -117,7 +117,7 @@ export async function addRelationship(
 
   if (!fromCharacterId || !toCharacterId) return { error: "Both characters required." };
   if (fromCharacterId === toCharacterId) return { error: "A character cannot relate to themselves." };
-  if (!["relative", "friend", "enemy"].includes(type)) return { error: "Invalid relationship type." };
+  if (!type.trim()) return { error: "Relationship type is required." };
 
   // Verify both characters belong to this universe
   const [from, to] = await Promise.all([

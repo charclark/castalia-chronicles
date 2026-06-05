@@ -107,13 +107,31 @@ const CHARACTER_TYPES = [
   "Vampire", "Human", "Wizard", "Werewolf", "Shapeshifter", "Ghost", "Other",
 ] as const;
 
-const REL_TYPES = ["relative", "friend", "enemy"] as const;
+// Preset relationship types — clicking fills the text field; typing anything custom also works
+const REL_PRESETS: { value: string; label: string }[] = [
+  { value: "friend",       label: "Friend" },
+  { value: "relative",     label: "Family" },
+  { value: "enemy",        label: "Enemy" },
+  { value: "partner",      label: "Partner" },
+  { value: "love interest", label: "Love Interest" },
+  { value: "married",      label: "Married" },
+  { value: "coworker",     label: "Coworker" },
+  { value: "rival",        label: "Rival" },
+  { value: "ally",         label: "Ally" },
+  { value: "mentor",       label: "Mentor" },
+];
 
-const relBadge: Record<string, React.CSSProperties> = {
+const REL_BADGE_KNOWN: Record<string, React.CSSProperties> = {
   relative: { background: "rgba(100,80,160,0.2)", color: "#c0a8f0", border: "1px solid rgba(100,80,160,0.4)" },
   friend:   { background: "rgba(60,130,80,0.2)",  color: "#8ec98d", border: "1px solid rgba(60,130,80,0.4)"  },
   enemy:    { background: "rgba(139,38,53,0.2)",  color: "#d4848e", border: "1px solid rgba(139,38,53,0.4)"  },
 };
+const REL_BADGE_DEFAULT: React.CSSProperties = {
+  background: "rgba(100,100,120,0.18)", color: "var(--color-ink-muted)", border: "1px solid var(--color-border-light)",
+};
+function relBadge(type: string): React.CSSProperties {
+  return REL_BADGE_KNOWN[type] ?? REL_BADGE_DEFAULT;
+}
 
 // ── Relationship row ─────────────────────────────────────────────────────────
 
@@ -127,7 +145,7 @@ function RelRow({
   onRemove: (id: string) => void;
 }) {
   const other = rel.fromCharacterId === thisId ? rel.toCharacter : rel.fromCharacter;
-  const badge = relBadge[rel.type] ?? {};
+  const badge = relBadge(rel.type);
 
   return (
     <div
@@ -212,7 +230,7 @@ function AddRelForm({
   onAdded: () => void;
 }) {
   const [toId, setToId] = useState(allChars[0]?.id ?? "");
-  const [type, setType] = useState<string>("friend");
+  const [type, setType] = useState("friend");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -244,7 +262,8 @@ function AddRelForm({
       {error && (
         <p style={{ color: "#d4848e", fontFamily: "var(--font-body)", fontSize: "0.85rem" }}>{error}</p>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "0.6rem", alignItems: "end" }}>
+      {/* Character + Note row */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
         <div style={fieldRow}>
           <label style={labelStyle}>Character</label>
           <select value={toId} onChange={(e) => setToId(e.target.value)} style={inputStyle}>
@@ -256,25 +275,53 @@ function AddRelForm({
           </select>
         </div>
         <div style={fieldRow}>
-          <label style={labelStyle}>Type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} style={{ ...inputStyle, width: "110px" }}>
-            {REL_TYPES.map((t) => (
-              <option key={t} value={t} style={{ background: "var(--color-bg-elevated)" }}>
-                {t.charAt(0).toUpperCase() + t.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={fieldRow}>
           <label style={labelStyle}>Note (optional)</label>
           <input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. brother, rival"
+            placeholder="e.g. childhood friends"
             maxLength={100}
-            style={{ ...inputStyle, width: "160px" }}
+            style={inputStyle}
           />
+        </div>
+      </div>
+
+      {/* Relationship type: free-text + preset chips */}
+      <div style={fieldRow}>
+        <label style={labelStyle}>Relationship Type</label>
+        <input
+          type="text"
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          placeholder="Type or click a preset below…"
+          style={inputStyle}
+        />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginTop: "0.4rem" }}>
+          {REL_PRESETS.map((p) => {
+            const active = type === p.value;
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setType(p.value)}
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.72rem",
+                  letterSpacing: "0.04em",
+                  padding: "0.2rem 0.55rem",
+                  borderRadius: "2px",
+                  border: `1px solid ${active ? "var(--color-gold-dim)" : "var(--color-border)"}`,
+                  background: active ? "rgba(201,168,76,0.1)" : "transparent",
+                  color: active ? "var(--color-gold)" : "var(--color-ink-faint)",
+                  cursor: "pointer",
+                  transition: "border-color 0.1s, color 0.1s, background 0.1s",
+                }}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
       </div>
       <div>
