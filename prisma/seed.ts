@@ -10,23 +10,21 @@ const adapter = new PrismaPg({
 const prisma = new PrismaClient({ adapter } as any);
 
 async function main() {
-  const count = await prisma.user.count();
-  if (count > 0) {
-    console.log(
-      `✓ ${count} user(s) already exist — skipping seed. Use the admin panel to add users.`
-    );
-    return;
-  }
+  const hashed = await bcrypt.hash("Sadie", 12);
 
-  const hashed = await bcrypt.hash("Castalia2024!", 12);
-  await prisma.user.create({
-    data: { username: "admin", password: hashed },
+  // Upsert the primary admin account.
+  // update: {} means: if "Char" already exists, leave the password untouched.
+  // Only the initial create sets the password, so re-deploys never wipe changes.
+  await prisma.user.upsert({
+    where: { username: "Char" },
+    update: {},
+    create: { username: "Char", password: hashed },
   });
 
-  console.log("✓ First admin account created:");
-  console.log("  Username: admin");
-  console.log("  Password: Castalia2024!");
-  console.log("  → Change this password immediately after your first login.");
+  console.log("✓ Admin account ready:");
+  console.log("  Username: Char");
+  console.log("  Password: Sadie  (only applies if the account was just created)");
+  console.log("  → Change this password in Admin → Settings after logging in.");
 }
 
 main()

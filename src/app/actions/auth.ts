@@ -72,6 +72,28 @@ export async function changePassword(
   return { success: "Password updated successfully." };
 }
 
+export async function requestTempPassword(
+  username: string
+): Promise<{ tempPassword?: string; error?: string }> {
+  const trimmed = username.trim();
+  if (!trimmed) return { error: "Please enter your username." };
+
+  const user = await prisma.user.findUnique({ where: { username: trimmed } });
+  if (!user) return { error: "No account found with that username." };
+
+  // Generate a readable 10-character temporary password
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let tempPassword = "";
+  for (let i = 0; i < 10; i++) {
+    tempPassword += chars[Math.floor(Math.random() * chars.length)];
+  }
+
+  const hashed = await bcrypt.hash(tempPassword, 12);
+  await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+  return { tempPassword };
+}
+
 export async function createUser(
   _prev: AuthState,
   formData: FormData
