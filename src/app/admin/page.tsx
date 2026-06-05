@@ -136,7 +136,9 @@ export default async function AdminDashboard() {
           { label: "Characters", note: "Coming soon", href: "" },
           { label: "Locations", note: "Coming soon", href: "" },
           { label: "Writing", note: "Books & short stories", href: "/admin/works" },
-          { label: "Feedback", note: "Coming soon", href: "" },
+          { label: "Feedback", note: "Reader messages", href: "/admin/feedback" },
+          { label: "Mailing List", note: "Subscribers & export", href: "/admin/mailing-list" },
+          { label: "Read Stats", note: "Free-read open counts", href: "/admin/free-read-stats" },
         ].map(({ label, note, href }) => {
           const cardStyle: React.CSSProperties = {
             display: "block",

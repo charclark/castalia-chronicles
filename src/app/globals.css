@@ -103,6 +103,46 @@ a:hover { color: var(--color-gold-dim); }
   color: var(--color-bg);
 }
 
+/* ── Public site ─────────────────────────────────────────────────────────── */
+.pub-cta-primary {
+  font-family: var(--font-heading);
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  letter-spacing: 0.08em;
+  padding: 0.65rem 1.75rem;
+  border-radius: 3px;
+  border: 1px solid var(--color-gold-dim);
+  color: var(--color-gold);
+  background: rgba(201,168,76,0.06);
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-block;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pub-cta-primary:hover {
+  border-color: var(--color-gold);
+  background: rgba(201,168,76,0.12);
+  color: var(--color-gold);
+}
+
+.pub-cta-secondary {
+  font-family: var(--font-heading);
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  letter-spacing: 0.08em;
+  padding: 0.65rem 1.75rem;
+  border-radius: 3px;
+  border: 1px solid var(--color-border-light);
+  color: var(--color-ink-muted);
+  background: transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-block;
+  transition: border-color 0.2s, color 0.2s;
+}
+.pub-cta-secondary:hover {
+  color: var(--color-ink);
+  border-color: var(--color-ink-faint);
+}
+
 /* ── TipTap Writing Editor ──────────────────────────────────────────────── */
 .tiptap-writing-area {
   font-family: var(--font-body);

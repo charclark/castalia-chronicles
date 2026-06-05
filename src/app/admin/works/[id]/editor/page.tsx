@@ -16,7 +16,7 @@ export default async function EditorPage({
 
   const work = await prisma.work.findFirst({
     where: { id, universeId },
-    select: { id: true, title: true, type: true, content: true, status: true },
+    select: { id: true, title: true, type: true, content: true, status: true, snippet: true },
   });
   if (!work) notFound();
 
@@ -26,6 +26,7 @@ export default async function EditorPage({
       title={work.title}
       workType={work.type}
       initialContent={work.content}
+      savedSnippet={work.snippet}
       backHref={`/admin/works/${work.id}`}
     />
   );

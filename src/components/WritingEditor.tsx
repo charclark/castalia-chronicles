@@ -4,13 +4,14 @@ import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { saveWorkContent } from "@/app/actions/works";
+import { saveWorkContent, updateSnippet } from "@/app/actions/works";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const AUTOSAVE_DELAY_MS = 1500;
 
 type SaveStatus = "idle" | "saving" | "saved";
+type SnippetStatus = "idle" | "saving" | "saved";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -77,12 +78,14 @@ export default function WritingEditor({
   title,
   workType,
   initialContent,
+  savedSnippet,
   backHref,
 }: {
   workId: string;
   title: string;
   workType: string;
   initialContent: string | null;
+  savedSnippet?: string | null;
   backHref: string;
 }) {
   const router = useRouter();
@@ -91,6 +94,12 @@ export default function WritingEditor({
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [relTimeStr, setRelTimeStr] = useState("");
   const [wordCount, setWordCount] = useState(0);
+
+  const [hasSelection, setHasSelection] = useState(false);
+  const [snippetStatus, setSnippetStatus] = useState<SnippetStatus>("idle");
+  const [currentSnippetLen, setCurrentSnippetLen] = useState<number>(
+    savedSnippet?.length ?? 0
+  );
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -110,6 +119,26 @@ export default function WritingEditor({
     [workId]
   );
 
+  // ── Snippet handler ───────────────────────────────────────────────────────
+
+  async function handleSetSnippet() {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    const text = editor.state.doc.textBetween(from, to, "\n\n");
+    if (!text.trim()) return;
+
+    setSnippetStatus("saving");
+    const result = await updateSnippet(workId, text);
+    if (!result?.error) {
+      setCurrentSnippetLen(text.trim().length);
+      setSnippetStatus("saved");
+      setTimeout(() => setSnippetStatus("idle"), 3000);
+    } else {
+      setSnippetStatus("idle");
+    }
+  }
+
   // ── TipTap editor ──────────────────────────────────────────────────────────
 
   const editor = useEditor({
@@ -125,6 +154,10 @@ export default function WritingEditor({
       debounceRef.current = setTimeout(() => {
         doSave(editor.getHTML());
       }, AUTOSAVE_DELAY_MS);
+    },
+    onSelectionUpdate: ({ editor }) => {
+      const { from, to } = editor.state.selection;
+      setHasSelection(from !== to);
     },
   });
 
@@ -347,6 +380,74 @@ export default function WritingEditor({
           active={marks?.para ?? false}
           onClick={() => editor?.chain().focus().setParagraph().run()}
         />
+
+        <div style={{ width: "1px", height: "18px", background: "var(--color-border)", margin: "0 0.15rem" }} />
+
+        {/* Set as Snippet — captures selected text as the public teaser */}
+        <button
+          type="button"
+          title={
+            hasSelection
+              ? "Save selected text as the public snippet/teaser"
+              : "Select text in the editor to set as public snippet"
+          }
+          onMouseDown={(e) => {
+            e.preventDefault(); // keep editor focus and selection
+            if (hasSelection && snippetStatus === "idle") {
+              void handleSetSnippet();
+            }
+          }}
+          disabled={!hasSelection || snippetStatus === "saving"}
+          style={{
+            background:
+              snippetStatus === "saved"
+                ? "rgba(201,168,76,0.12)"
+                : "transparent",
+            border: `1px solid ${
+              snippetStatus === "saved"
+                ? "var(--color-gold-dim)"
+                : "var(--color-border)"
+            }`,
+            borderRadius: "3px",
+            padding: "0.2rem 0.65rem",
+            color:
+              snippetStatus === "saved"
+                ? "var(--color-gold)"
+                : hasSelection
+                  ? "var(--color-ink-muted)"
+                  : "var(--color-ink-faint)",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.78rem",
+            letterSpacing: "0.04em",
+            cursor: hasSelection && snippetStatus === "idle" ? "pointer" : "default",
+            opacity: hasSelection ? 1 : 0.45,
+            transition: "all 0.12s",
+            whiteSpace: "nowrap",
+            lineHeight: 1.5,
+          }}
+        >
+          {snippetStatus === "saving"
+            ? "Saving…"
+            : snippetStatus === "saved"
+              ? "Snippet saved ✓"
+              : "Set as Snippet"}
+        </button>
+
+        {/* Snippet indicator — shown when a snippet is already saved */}
+        {currentSnippetLen > 0 && snippetStatus === "idle" && (
+          <span
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.72rem",
+              color: "var(--color-ink-faint)",
+              fontStyle: "italic",
+              marginLeft: "0.35rem",
+              alignSelf: "center",
+            }}
+          >
+            snippet: {currentSnippetLen} chars
+          </span>
+        )}
       </div>
 
       {/* ── Editor surface ───────────────────────────────────────────────── */}

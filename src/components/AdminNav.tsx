@@ -11,6 +11,10 @@ const NAV_LINKS = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/works", label: "Writing" },
   { href: "/admin/universes", label: "Universes" },
+  { href: "/admin/feedback", label: "Feedback" },
+  { href: "/admin/mailing-list", label: "Mailing List" },
+  { href: "/admin/free-read-stats", label: "Read Stats" },
+  { href: "/admin/about", label: "About Page" },
   { href: "/admin/settings", label: "Settings" },
   { href: "/admin/users", label: "Users" },
 ];
@@ -81,7 +85,7 @@ export default function AdminNav({
           currentId={currentUniverseId}
         />
 
-        {/* Right: username + logout */}
+        {/* Right: view site + username + logout */}
         <div
           style={{
             display: "flex",
@@ -90,6 +94,31 @@ export default function AdminNav({
             whiteSpace: "nowrap",
           }}
         >
+          <Link
+            href="/"
+            target="_blank"
+            rel="noopener"
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.78rem",
+              color: "var(--color-ink-faint)",
+              textDecoration: "none",
+              letterSpacing: "0.04em",
+              borderBottom: "1px solid var(--color-border)",
+              paddingBottom: "1px",
+              transition: "color 0.15s, border-color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "var(--color-gold)";
+              e.currentTarget.style.borderColor = "var(--color-gold-dim)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "var(--color-ink-faint)";
+              e.currentTarget.style.borderColor = "var(--color-border)";
+            }}
+          >
+            View site ↗
+          </Link>
           <span
             style={{
               fontFamily: "var(--font-body)",
