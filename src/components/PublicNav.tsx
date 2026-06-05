@@ -97,6 +97,33 @@ export default function PublicNav() {
           })}
 
           <FeedbackPopup />
+
+          {/* Subtle admin entry point — small, unobtrusive, far right */}
+          <Link
+            href="/admin"
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.72rem",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--color-ink-faint)",
+              textDecoration: "none",
+              padding: "0.3rem 0.4rem",
+              marginLeft: "0.5rem",
+              opacity: 0.5,
+              transition: "opacity 0.2s, color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = "1";
+              e.currentTarget.style.color = "var(--color-ink-muted)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = "0.5";
+              e.currentTarget.style.color = "var(--color-ink-faint)";
+            }}
+          >
+            Admin
+          </Link>
         </nav>
       </div>
     </header>
