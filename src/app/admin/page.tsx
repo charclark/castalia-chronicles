@@ -55,7 +55,7 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <style>{`.admin-write-btn:hover { border-color: var(--color-gold) !important; }`}</style>
+      <style>{`.admin-write-btn:hover, .admin-add-btn:hover { border-color: var(--color-gold) !important; }`}</style>
       <h2
         style={{
           fontFamily: "var(--font-heading)",
@@ -168,6 +168,8 @@ export default async function AdminDashboard() {
           count={charCount as number}
           countLabel="character"
           href={currentUniverse && (charCount as number) > 0 ? "?popup=characters" : ""}
+          addHref="/admin/characters/new"
+          addLabel="+Character"
           style={cardBase}
           hasUniverse={!!currentUniverse}
           recentItems={(recentChars as { id: string; name: string; characterType: string }[]).map((c) => ({
@@ -181,6 +183,8 @@ export default async function AdminDashboard() {
           count={locCount as number}
           countLabel="location"
           href={currentUniverse && (locCount as number) > 0 ? "?popup=locations" : ""}
+          addHref="/admin/locations/new"
+          addLabel="+Location"
           style={cardBase}
           hasUniverse={!!currentUniverse}
           recentItems={(recentLocs as { id: string; name: string; locatedIn: string | null }[]).map((l) => ({
@@ -189,12 +193,35 @@ export default async function AdminDashboard() {
         />
 
         {/* Writing */}
-        <Link href="/admin/works" style={cardBase} className="admin-card-link">
-          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Writing</h3>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>
-            {(workCount as number) > 0 ? `${workCount} work${(workCount as number) !== 1 ? "s" : ""}` : "Books & short stories"}
-          </p>
-        </Link>
+        <div style={{ ...cardBase, display: "flex", flexDirection: "column" }}>
+          <Link href="/admin/works" style={{ textDecoration: "none", flexGrow: 1 }} className="admin-card-link">
+            <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Writing</h3>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>
+              {(workCount as number) > 0 ? `${workCount} work${(workCount as number) !== 1 ? "s" : ""}` : "Books & short stories"}
+            </p>
+          </Link>
+          <div style={{ marginTop: "0.75rem" }}>
+            <Link
+              href="/admin/works"
+              className="admin-add-btn"
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "0.82rem",
+                color: "var(--color-gold)",
+                border: "1px solid var(--color-gold-dim)",
+                borderRadius: "3px",
+                padding: "0.25rem 0.65rem",
+                background: "transparent",
+                textDecoration: "none",
+                letterSpacing: "0.05em",
+                transition: "border-color 0.15s",
+                display: "inline-block",
+              }}
+            >
+              +Write
+            </Link>
+          </div>
+        </div>
 
         {/* Feedback */}
         <Link href="/admin/feedback" style={cardBase} className="admin-card-link">
@@ -234,6 +261,8 @@ function DashCard({
   count,
   countLabel,
   href,
+  addHref,
+  addLabel,
   style,
   hasUniverse,
   recentItems,
@@ -242,10 +271,36 @@ function DashCard({
   count: number;
   countLabel: string;
   href: string;
+  addHref?: string;
+  addLabel?: string;
   style: React.CSSProperties;
   hasUniverse: boolean;
   recentItems: { id: string; name: string; sub?: string; href: string }[];
 }) {
+  const addBtn = addHref && addLabel ? (
+    <div style={{ marginTop: "0.75rem" }}>
+      <Link
+        href={addHref}
+        className="admin-add-btn"
+        style={{
+          fontFamily: "var(--font-body)",
+          fontSize: "0.82rem",
+          color: "var(--color-gold)",
+          border: "1px solid var(--color-gold-dim)",
+          borderRadius: "3px",
+          padding: "0.25rem 0.65rem",
+          background: "transparent",
+          textDecoration: "none",
+          letterSpacing: "0.05em",
+          transition: "border-color 0.15s",
+          display: "inline-block",
+        }}
+      >
+        {addLabel}
+      </Link>
+    </div>
+  ) : null;
+
   const inner = (
     <>
       <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
@@ -272,6 +327,7 @@ function DashCard({
           </ul>
         </>
       )}
+      {addBtn}
     </>
   );
 
@@ -280,8 +336,34 @@ function DashCard({
   }
 
   return (
-    <Link href={href} style={style} className="admin-card-link">
-      {inner}
-    </Link>
+    <div style={style}>
+      <Link href={href} style={{ textDecoration: "none", display: "block" }} className="admin-card-link">
+        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
+          {label}
+        </h3>
+        {!hasUniverse ? (
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>Select a universe first</p>
+        ) : count === 0 ? (
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>No {label.toLowerCase()} yet</p>
+        ) : (
+          <>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-gold)", marginBottom: "0.6rem" }}>
+              {count} {countLabel}{count !== 1 ? "s" : ""}
+            </p>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+              {recentItems.map((item) => (
+                <li key={item.id} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-muted)" }}>
+                    {item.name}
+                    {item.sub && <span style={{ color: "var(--color-ink-faint)", marginLeft: "0.3rem" }}>· {item.sub}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </Link>
+      {addBtn}
+    </div>
   );
 }
