@@ -11,6 +11,7 @@ import {
   removeRelationship,
 } from "@/app/actions/characters";
 import { createCustomRole, deleteCustomRole } from "@/app/actions/roles";
+import { createSpecies } from "@/app/actions/species";
 import { DEFAULT_ROLES } from "@/lib/roles-constants";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -105,8 +106,11 @@ const grid3: React.CSSProperties = {
   gap: "1rem",
 };
 
-const CHARACTER_TYPES = [
-  "Vampire", "Human", "Wizard", "Werewolf", "Shapeshifter", "Ghost", "Other",
+// Standard species — locked, cannot be edited or deleted by anyone.
+// Must stay in sync with STANDARD_SPECIES in src/app/actions/species.ts and
+// DEFAULT_SPECIES in ConnectionsMap.tsx.
+const STANDARD_SPECIES = [
+  "Human", "Vampire", "Werewolf", "Wizard", "Shapeshifter", "Ghost",
 ] as const;
 
 // Preset relationship types — clicking fills the text field; typing anything custom also works
@@ -399,7 +403,7 @@ export default function CharacterForm({
   character,
   allChars,
   relationships,
-  customSpecies = [],
+  customSpecies: initialCustomSpecies = [],
   currentRoles = [],
   customRoles = [],
   isSuperAdmin = false,
@@ -430,6 +434,25 @@ export default function CharacterForm({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
+
+  // Custom species state (for the add-species section on this page)
+  const [localCustomSpecies, setLocalCustomSpecies] = useState<string[]>(initialCustomSpecies);
+  const [newSpeciesName, setNewSpeciesName] = useState("");
+  const [newSpeciesColor, setNewSpeciesColor] = useState("#9e4a6c");
+  const [newSpeciesShape, setNewSpeciesShape] = useState<"circle" | "triangle" | "diamond" | "square">("circle");
+  const [speciesError, setSpeciesError] = useState("");
+  const [speciesPending, startSpeciesTransition] = useTransition();
+
+  function handleAddSpecies(e: React.FormEvent) {
+    e.preventDefault();
+    setSpeciesError("");
+    startSpeciesTransition(async () => {
+      const r = await createSpecies(universeId, newSpeciesName.trim(), newSpeciesColor, newSpeciesShape);
+      if (r.error) { setSpeciesError(r.error); return; }
+      setLocalCustomSpecies((prev) => [...prev, newSpeciesName.trim()]);
+      setNewSpeciesName("");
+    });
+  }
 
   // Role state
   const [selectedRoles, setSelectedRoles] = useState<string[]>(currentRoles);
@@ -547,10 +570,10 @@ export default function CharacterForm({
               <div style={fieldRow}>
                 <label htmlFor="characterType" style={labelStyle}>Character Type</label>
                 <select id="characterType" name="characterType" defaultValue={character?.characterType ?? "Human"} style={inputStyle}>
-                  {CHARACTER_TYPES.map((t) => (
+                  {STANDARD_SPECIES.map((t) => (
                     <option key={t} value={t} style={{ background: "var(--color-bg-elevated)" }}>{t}</option>
                   ))}
-                  {customSpecies.filter((s) => !CHARACTER_TYPES.includes(s as never)).map((s) => (
+                  {localCustomSpecies.filter((s) => !STANDARD_SPECIES.includes(s as never)).map((s) => (
                     <option key={s} value={s} style={{ background: "var(--color-bg-elevated)" }}>{s}</option>
                   ))}
                 </select>
@@ -561,6 +584,95 @@ export default function CharacterForm({
               </div>
             </div>
           </div>
+        </section>
+
+        {/* ── Custom Species ── */}
+        <section>
+          <p style={sectionHead}>Custom Species</p>
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", marginBottom: "0.85rem", fontStyle: "italic" }}>
+            Add a custom species for this universe. It will appear in the Character Type dropdown and on the Connections Map.
+          </p>
+          <form onSubmit={handleAddSpecies} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            <div style={grid2}>
+              <div style={fieldRow}>
+                <label htmlFor="newSpeciesName" style={labelStyle}>Species Name</label>
+                <input
+                  id="newSpeciesName"
+                  type="text"
+                  value={newSpeciesName}
+                  onChange={(e) => setNewSpeciesName(e.target.value)}
+                  placeholder="e.g. Zombie, Fae, Demon…"
+                  maxLength={60}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={fieldRow}>
+                <label style={labelStyle}>Shape</label>
+                <select
+                  value={newSpeciesShape}
+                  onChange={(e) => setNewSpeciesShape(e.target.value as "circle" | "triangle" | "diamond" | "square")}
+                  style={inputStyle}
+                >
+                  {(["circle", "triangle", "diamond", "square"] as const).map((s) => (
+                    <option key={s} value={s} style={{ background: "var(--color-bg-elevated)" }}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+              <div style={fieldRow}>
+                <label htmlFor="newSpeciesColor" style={labelStyle}>Color</label>
+                <input
+                  id="newSpeciesColor"
+                  type="color"
+                  value={newSpeciesColor}
+                  onChange={(e) => setNewSpeciesColor(e.target.value)}
+                  style={{ width: "60px", height: "34px", border: "1px solid var(--color-border)", borderRadius: "3px", background: "var(--color-bg)", cursor: "pointer" }}
+                />
+              </div>
+              {speciesError && (
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "#d4848e", margin: 0 }}>{speciesError}</p>
+              )}
+              <button
+                type="submit"
+                disabled={speciesPending || !newSpeciesName.trim()}
+                style={{
+                  fontFamily: "var(--font-heading)",
+                  fontSize: "0.88rem",
+                  letterSpacing: "0.06em",
+                  background: !newSpeciesName.trim() || speciesPending ? "var(--color-border)" : "var(--color-crimson)",
+                  border: "none",
+                  borderRadius: "3px",
+                  padding: "0.4rem 1rem",
+                  color: "var(--color-ink)",
+                  cursor: !newSpeciesName.trim() || speciesPending ? "default" : "pointer",
+                  alignSelf: "flex-end",
+                }}
+              >
+                {speciesPending ? "Adding…" : "Add Species"}
+              </button>
+            </div>
+            {localCustomSpecies.filter((s) => !STANDARD_SPECIES.includes(s as never)).length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginTop: "0.25rem" }}>
+                {localCustomSpecies.filter((s) => !STANDARD_SPECIES.includes(s as never)).map((s) => (
+                  <span
+                    key={s}
+                    style={{
+                      fontFamily: "var(--font-body)",
+                      fontSize: "0.75rem",
+                      letterSpacing: "0.06em",
+                      color: "var(--color-ink-muted)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "2px",
+                      padding: "0.1rem 0.45rem",
+                    }}
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </form>
         </section>
 
         {/* ── Roles ── */}

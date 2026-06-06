@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUniverseEdit } from "@/lib/auth-utils";
 
+export const STANDARD_SPECIES = [
+  "Human", "Vampire", "Werewolf", "Wizard", "Shapeshifter", "Ghost",
+] as const;
+
 export async function createSpecies(
   universeId: string,
   name: string,
@@ -18,6 +22,9 @@ export async function createSpecies(
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) return { error: "Invalid color." };
   if (!["circle", "triangle", "diamond", "square"].includes(shape))
     return { error: "Invalid shape." };
+
+  if (STANDARD_SPECIES.some((s) => s.toLowerCase() === trimmed.toLowerCase()))
+    return { error: `"${trimmed}" is a standard species and cannot be added as custom.` };
 
   const existing = await prisma.species.findUnique({
     where: { universeId_name: { universeId, name: trimmed } },

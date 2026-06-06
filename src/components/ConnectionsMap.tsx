@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createSpecies, deleteSpecies } from "@/app/actions/species";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +46,6 @@ const DEFAULT_SPECIES: Record<string, SpeciesInfo> = {
   Wizard:      { color: "#7a4a9e", shape: "diamond" },
   Shapeshifter:{ color: "#9e6a3a", shape: "circle" },
   Ghost:       { color: "#7a7a8a", shape: "circle" },
-  Other:       { color: "#4a4a5a", shape: "square" },
 };
 const FALLBACK_SPECIES: SpeciesInfo = { color: "#6a7a9e", shape: "circle" };
 
@@ -220,66 +218,9 @@ function runSimulation(
   return ns;
 }
 
-// ── Manage Species Panel ──────────────────────────────────────────────────────
+// ── Species Panel (read-only) ─────────────────────────────────────────────────
 
-const SHAPES: Shape[] = ["circle", "triangle", "diamond", "square"];
-
-function ManageSpeciesPanel({
-  customSpecies,
-  onRefresh,
-}: {
-  customSpecies: RawSpecies[];
-  onRefresh: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [color, setColor] = useState("#9e4a6c");
-  const [shape, setShape] = useState<Shape>("circle");
-  const [error, setError] = useState("");
-  const [pending, start] = useTransition();
-
-  async function handleAdd(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    start(async () => {
-      // Get universeId from cookie via the server action (it uses requireUniverseEdit internally)
-      const universeId = document.cookie.match(/selected-universe=([^;]+)/)?.[1];
-      if (!universeId) { setError("No universe selected."); return; }
-      const r = await createSpecies(universeId, name.trim(), color, shape);
-      if (r.error) { setError(r.error); return; }
-      setName("");
-      onRefresh();
-    });
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm("Remove this custom species?")) return;
-    start(async () => {
-      await deleteSpecies(id);
-      onRefresh();
-    });
-  }
-
-  const labelSm: React.CSSProperties = {
-    fontFamily: "var(--font-body)",
-    fontSize: "0.7rem",
-    letterSpacing: "0.1em",
-    textTransform: "uppercase",
-    color: "var(--color-ink-faint)",
-    display: "block",
-    marginBottom: "0.2rem",
-  };
-  const inp: React.CSSProperties = {
-    background: "var(--color-bg)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "3px",
-    padding: "0.3rem 0.5rem",
-    color: "var(--color-ink)",
-    fontFamily: "var(--font-body)",
-    fontSize: "0.85rem",
-    outline: "none",
-    width: "100%",
-  };
-
+function ManageSpeciesPanel({ customSpecies }: { customSpecies: RawSpecies[] }) {
   const allSpecies = [
     ...Object.entries(DEFAULT_SPECIES).map(([n, s]) => ({ id: n, name: n, ...s, isDefault: true })),
     ...customSpecies.map((s) => ({ ...s, isDefault: false })),
@@ -304,64 +245,25 @@ function ManageSpeciesPanel({
         Species
       </p>
 
-      {/* Species list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "1.25rem" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
         {allSpecies.map((s) => (
           <div key={s.id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <LegendShape shape={s.shape as Shape} color={s.color} size={8} />
-            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-muted)", flex: 1 }}>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: s.isDefault ? "var(--color-ink-muted)" : "var(--color-ink)", flex: 1 }}>
               {s.name}
             </span>
             {!s.isDefault && (
-              <button
-                type="button"
-                onClick={() => handleDelete(s.id)}
-                disabled={pending}
-                style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--color-ink-faint)", fontSize: "0.75rem", padding: "0 0.2rem" }}
-              >
-                ✕
-              </button>
+              <span style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.08em", color: "var(--color-ink-faint)", textTransform: "uppercase" }}>
+                custom
+              </span>
             )}
           </div>
         ))}
       </div>
 
-      {/* Add custom species */}
-      <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "1rem" }}>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-ink-faint)", marginBottom: "0.75rem" }}>
-          Add Custom
-        </p>
-        <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-          <div>
-            <label style={labelSm}>Name</label>
-            <input style={inp} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Zombie" required maxLength={60} />
-          </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <div style={{ flex: 1 }}>
-              <label style={labelSm}>Color</label>
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value)}
-                style={{ width: "100%", height: "32px", border: "1px solid var(--color-border)", borderRadius: "3px", background: "var(--color-bg)", cursor: "pointer" }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={labelSm}>Shape</label>
-              <select value={shape} onChange={(e) => setShape(e.target.value as Shape)}
-                style={{ ...inp, padding: "0.35rem 0.4rem" }}>
-                {SHAPES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-          {error && <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "#d4848e" }}>{error}</p>}
-          <button type="submit" disabled={pending || !name.trim()}
-            style={{
-              background: !name.trim() || pending ? "var(--color-border)" : "var(--color-crimson)",
-              border: "none", borderRadius: "3px", padding: "0.45rem 0.75rem",
-              color: "var(--color-ink)", fontFamily: "var(--font-heading)", fontSize: "0.88rem",
-              letterSpacing: "0.06em", cursor: !name.trim() || pending ? "default" : "pointer",
-            }}>
-            {pending ? "Adding…" : "Add Species"}
-          </button>
-        </form>
-      </div>
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginTop: "1rem", lineHeight: 1.5 }}>
+        Add custom species from a character page.
+      </p>
     </div>
   );
 }
@@ -666,15 +568,12 @@ export default function ConnectionsMap() {
           zIndex: 10,
         }}
       >
-        {showSpeciesPanel ? "← Map" : "Species ⚙"}
+        {showSpeciesPanel ? "← Map" : "Species"}
       </button>
 
-      {/* ── Manage Species panel ── */}
+      {/* ── Species panel (read-only) ── */}
       {showSpeciesPanel && (
-        <ManageSpeciesPanel
-          customSpecies={customSpecies}
-          onRefresh={fetchData}
-        />
+        <ManageSpeciesPanel customSpecies={customSpecies} />
       )}
 
       {/* ── Tooltip ── */}
