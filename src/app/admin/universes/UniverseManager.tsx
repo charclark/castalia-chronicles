@@ -448,7 +448,7 @@ export default function UniverseManager({
 
   return (
     <div>
-      {isSuperAdmin && <CreateUniverseForm />}
+      <CreateUniverseForm />
 
       {initialUniverses.length === 0 ? (
         <div
