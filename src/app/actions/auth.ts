@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
+import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-import { createSession, deleteSession, getSession } from "@/lib/session";
+import { createSession, getSession } from "@/lib/session";
 import { requireSuperAdmin, validatePassword } from "@/lib/auth-utils";
 
 export type AuthState = {
@@ -40,7 +41,17 @@ export async function login(
 }
 
 export async function logout() {
-  await deleteSession();
+  // Inline the cookie-clearing here so it runs inside this "use server" boundary.
+  // Delegating to deleteSession() in session.ts fails because that file is not a
+  // Server Function and Next.js 16 only permits cookies().set() inside one.
+  const cookieStore = await cookies();
+  cookieStore.set("session", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    expires: new Date(0),
+    sameSite: "lax",
+    path: "/",
+  });
   redirect("/login");
 }
 
