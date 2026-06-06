@@ -55,6 +55,7 @@ export default async function AdminDashboard() {
 
   return (
     <div>
+      <style>{`.admin-write-btn:hover { border-color: var(--color-gold) !important; }`}</style>
       <h2
         style={{
           fontFamily: "var(--font-heading)",
@@ -133,8 +134,7 @@ export default async function AdminDashboard() {
                 letterSpacing: "0.05em",
                 transition: "border-color 0.15s",
               }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--color-gold)")}
-              onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
+              className="admin-write-btn"
             >
               Write →
             </Link>
