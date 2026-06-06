@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireSuperAdmin } from "@/lib/auth-utils";
+import { requireSuperAdmin, requireUniverseEdit } from "@/lib/auth-utils";
 
 export type AccessState = { error?: string; success?: string } | null;
 
@@ -69,6 +69,43 @@ export async function revokeUniverseAccess(
     where: { universeId, userId },
   });
 
+  revalidatePath("/admin/universes");
+  return {};
+}
+
+// ── Owner-initiated sharing (no superadmin required) ──────────────────────────
+// Any user with edit access to the currently selected universe can share it.
+
+export async function shareUniverseAsOwner(
+  universeId: string,
+  userId: string,
+  permission: "view" | "edit"
+): Promise<{ error?: string }> {
+  const { session } = await requireUniverseEdit();
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "User not found." };
+  if (userId === session.userId) return { error: "You cannot share with yourself." };
+
+  await prisma.universeAccess.upsert({
+    where: { universeId_userId: { universeId, userId } },
+    update: { permission },
+    create: { universeId, userId, permission },
+  });
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/universes");
+  return {};
+}
+
+export async function revokeUniverseShareAsOwner(
+  universeId: string,
+  userId: string
+): Promise<{ error?: string }> {
+  await requireUniverseEdit();
+
+  await prisma.universeAccess.deleteMany({ where: { universeId, userId } });
+  revalidatePath("/admin");
   revalidatePath("/admin/universes");
   return {};
 }

@@ -9,38 +9,33 @@ export default async function UniversesPage() {
   if (!session) return null;
   const isSuperAdmin = session.isSuperAdmin;
 
-  // Active universes
-  const universes = isSuperAdmin
-    ? await prisma.universe.findMany({
-        where: { archivedAt: null },
-        orderBy: { createdAt: "asc" },
-        include: {
-          accesses: {
-            include: { user: { select: { id: true, username: true } } },
-          },
-        },
-      })
-    : await prisma.universe.findMany({
-        where: {
-          archivedAt: null,
-          OR: [
-            { createdByUserId: session.userId },
-            { isPrivate: false, accesses: { some: { userId: session.userId } } },
-          ],
-        },
-        orderBy: { createdAt: "asc" },
-      });
+  // Active universes — everyone sees only what they own/are shared on.
+  // Superadmin also picks up legacy universes with no recorded creator.
+  const universes = await prisma.universe.findMany({
+    where: {
+      archivedAt: null,
+      OR: [
+        { createdByUserId: session.userId },
+        ...(isSuperAdmin ? [{ createdByUserId: null }] : []),
+        { accesses: { some: { userId: session.userId } } },
+      ],
+    },
+    orderBy: { createdAt: "asc" },
+    include: {
+      accesses: {
+        include: { user: { select: { id: true, username: true } } },
+      },
+    },
+  });
 
   const cookieStore = await cookies();
   const selectedId = cookieStore.get("selected-universe")?.value ?? null;
 
-  const otherUsers = isSuperAdmin
-    ? await prisma.user.findMany({
-        where: { isSuperAdmin: false },
-        orderBy: { username: "asc" },
-        select: { id: true, username: true },
-      })
-    : [];
+  const otherUsers = await prisma.user.findMany({
+    where: { id: { not: session.userId } },
+    orderBy: { username: "asc" },
+    select: { id: true, username: true },
+  });
 
   // Archived universes — Char only, archived by non-Char users
   const archivedUniverses = isSuperAdmin

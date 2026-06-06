@@ -11,17 +11,28 @@ function slugify(name: string): string {
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
-  if (!session.isSuperAdmin) return new NextResponse("Forbidden", { status: 403 });
 
   const cookieStore = await cookies();
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) return new NextResponse("No universe selected", { status: 400 });
 
+  // Verify the user has access to this universe
   const universe = await prisma.universe.findUnique({
     where: { id: universeId },
-    select: { name: true, description: true },
+    select: {
+      name: true,
+      description: true,
+      createdByUserId: true,
+      accesses: { where: { userId: session.userId }, select: { id: true } },
+    },
   });
   if (!universe) return new NextResponse("Universe not found", { status: 404 });
+
+  const hasAccess =
+    universe.createdByUserId === session.userId ||
+    (universe.createdByUserId === null && session.isSuperAdmin) ||
+    universe.accesses.length > 0;
+  if (!hasAccess) return new NextResponse("Forbidden", { status: 403 });
 
   const [characters, relationships, locations, storylineIdeas, plotItems, notes, images] =
     await Promise.all([

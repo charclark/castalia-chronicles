@@ -14,13 +14,27 @@ export async function GET(
 ) {
   const session = await getSession();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
-  if (!session.isSuperAdmin) return new NextResponse("Forbidden", { status: 403 });
 
   const { id } = await params;
 
   const cookieStore = await cookies();
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) return new NextResponse("No universe selected", { status: 400 });
+
+  // Verify the user has access to this universe
+  const universeAccess = await prisma.universe.findUnique({
+    where: { id: universeId },
+    select: {
+      createdByUserId: true,
+      accesses: { where: { userId: session.userId }, select: { id: true } },
+    },
+  });
+  if (!universeAccess) return new NextResponse("Universe not found", { status: 404 });
+  const hasAccess =
+    universeAccess.createdByUserId === session.userId ||
+    (universeAccess.createdByUserId === null && session.isSuperAdmin) ||
+    universeAccess.accesses.length > 0;
+  if (!hasAccess) return new NextResponse("Forbidden", { status: 403 });
 
   const work = await prisma.work.findFirst({
     where: { id, universeId },

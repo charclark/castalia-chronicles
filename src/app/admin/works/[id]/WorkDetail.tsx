@@ -573,11 +573,9 @@ function BuyLinksEditor({ work }: { work: WorkMeta }) {
 export default function WorkDetail({
   work,
   availableImages,
-  isSuperAdmin,
 }: {
   work: WorkMeta;
   availableImages: ImageOption[];
-  isSuperAdmin: boolean;
 }) {
   const router = useRouter();
   const [renameState, renameAction, renamePending] = useActionState(renameWork, null);
@@ -662,8 +660,8 @@ export default function WorkDetail({
             </span>
           </Link>
 
-          {/* Backup — two download links (superadmin only) */}
-          {isSuperAdmin && <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          {/* Backup — two download links */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
             <a
               href={`/api/admin/backup/work/${work.id}?format=json`}
               download
@@ -698,7 +696,7 @@ export default function WorkDetail({
             >
               ↓ Word (.docx)
             </a>
-          </div>}
+          </div>
         </div>
       </div>
 

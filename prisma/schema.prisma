@@ -22,9 +22,10 @@ model User {
   forcePasswordChange Boolean          @default(false)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
-  universeAccess   UniverseAccess[]
-  createdUniverses Universe[]       @relation("UniverseCreator")
-  archivedUniverses Universe[]      @relation("UniverseArchiver")
+  universeAccess    UniverseAccess[]
+  createdUniverses  Universe[]       @relation("UniverseCreator")
+  archivedUniverses Universe[]       @relation("UniverseArchiver")
+  workShares        WorkShare[]
 }
 
 // --- Universe ---
@@ -322,9 +323,27 @@ model Work {
   updatedAt    DateTime  @updatedAt
   chapters     Chapter[]
   flags        Flag[]
+  shares       WorkShare[]
 
   @@index([universeId])
   @@index([coverImageId])
+}
+
+// --- Work Shares ---
+// Grants a specific user comment-only (read) access to a single work.
+// Created by the work's universe owner/editor; lets the sharer collect
+// feedback on a story without exposing the rest of the universe.
+model WorkShare {
+  id        String   @id @default(cuid())
+  workId    String
+  work      Work     @relation(fields: [workId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([workId, userId])
+  @@index([workId])
+  @@index([userId])
 }
 
 // --- Species ---

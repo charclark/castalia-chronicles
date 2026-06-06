@@ -51,19 +51,18 @@ export async function requireUniverseEdit(): Promise<{
   return { session, universeId };
 }
 
-// Returns all universes the current user can see:
-// super-admin sees every universe; others see non-private universes they have access to.
+// Returns all universes the current user can see.
+// Everyone (including superadmin) sees only universes they created or were shared on.
+// Superadmin additionally sees legacy universes with no recorded creator.
 export async function getAccessibleUniverses(session: SessionPayload) {
-  if (session.isSuperAdmin) {
-    return prisma.universe.findMany({
-      orderBy: { createdAt: "asc" },
-      select: { id: true, name: true, isPrivate: true },
-    });
-  }
   return prisma.universe.findMany({
     where: {
-      isPrivate: false,
-      accesses: { some: { userId: session.userId } },
+      archivedAt: null,
+      OR: [
+        { createdByUserId: session.userId },
+        ...(session.isSuperAdmin ? [{ createdByUserId: null }] : []),
+        { accesses: { some: { userId: session.userId } } },
+      ],
     },
     orderBy: { createdAt: "asc" },
     select: { id: true, name: true, isPrivate: true },

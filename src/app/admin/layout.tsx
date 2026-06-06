@@ -23,24 +23,20 @@ export default async function AdminLayout({
   if (userRecord?.forcePasswordChange) redirect("/force-change-password");
 
   // Universe selector — archived universes never appear in the sidebar/selector.
-  // Super-admin sees all active universes; others see their own + shared ones.
-  const universes = session.isSuperAdmin
-    ? await prisma.universe.findMany({
-        where: { archivedAt: null },
-        orderBy: { createdAt: "asc" },
-        select: { id: true, name: true },
-      })
-    : await prisma.universe.findMany({
-        where: {
-          archivedAt: null,
-          OR: [
-            { createdByUserId: session.userId },
-            { isPrivate: false, accesses: { some: { userId: session.userId } } },
-          ],
-        },
-        orderBy: { createdAt: "asc" },
-        select: { id: true, name: true },
-      });
+  // Everyone (including superadmin) sees only universes they created or were shared with.
+  // Superadmin also sees legacy universes with no owner (createdByUserId = null).
+  const universes = await prisma.universe.findMany({
+    where: {
+      archivedAt: null,
+      OR: [
+        { createdByUserId: session.userId },
+        ...(session.isSuperAdmin ? [{ createdByUserId: null }] : []),
+        { accesses: { some: { userId: session.userId } } },
+      ],
+    },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, name: true },
+  });
 
   const cookieStore = await cookies();
   const cookieId = cookieStore.get("selected-universe")?.value ?? null;

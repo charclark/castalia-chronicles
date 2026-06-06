@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
 import WorkDetail from "./WorkDetail";
 
 export default async function WorkPage({
@@ -46,8 +45,5 @@ export default async function WorkPage({
         })
       : [];
 
-  const session = await getSession();
-  const isSuperAdmin = session?.isSuperAdmin ?? false;
-
-  return <WorkDetail work={work} availableImages={images} isSuperAdmin={isSuperAdmin} />;
+  return <WorkDetail work={work} availableImages={images} />;
 }

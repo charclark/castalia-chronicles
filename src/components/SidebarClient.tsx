@@ -392,8 +392,8 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
         entryHref={(id) => `/admin/images/${id}`}
       />
 
-      {/* Divider + Universe backup — superadmin only */}
-      {isSuperAdmin && <>
+      {/* Divider + Universe backup */}
+      <>
       <div style={{ height: "1px", background: "var(--color-border)", margin: "0.75rem 0.75rem 0.5rem" }} />
       <div style={{ padding: "0.25rem 1rem 0.75rem" }}>
         <p style={{ ...sectionLabel, marginBottom: "0.5rem" }}>Story Bible Backup</p>
@@ -436,7 +436,7 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
           </a>
         </div>
       </div>
-      </>}
+      </>
     </aside>
   );
 }
