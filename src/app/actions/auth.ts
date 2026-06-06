@@ -34,6 +34,8 @@ export async function login(
     username: user.username,
     isSuperAdmin: user.isSuperAdmin,
   });
+
+  if (user.forcePasswordChange) redirect("/force-change-password");
   redirect("/admin");
 }
 
@@ -149,9 +151,9 @@ export async function createUser(
   }
 
   const hashed = await bcrypt.hash(password, 12);
-  await prisma.user.create({ data: { username, password: hashed } });
+  await prisma.user.create({ data: { username, password: hashed, forcePasswordChange: true } });
 
-  return { success: `User "${username}" created.` };
+  return { success: `User "${username}" created. They will be prompted to set a new password on first login.` };
 }
 
 export async function deleteUser(userId: string): Promise<{ error?: string }> {
@@ -185,6 +187,33 @@ export async function adminResetPassword(
   if (err) return { error: err };
 
   const hashed = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
-  return { success: `Password reset for "${user.username}".` };
+  await prisma.user.update({ where: { id: userId }, data: { password: hashed, forcePasswordChange: true } });
+  return { success: `Password reset for "${user.username}". They will be prompted to change it on next login.` };
+}
+
+// ── Force password change (used on first login / after admin reset) ────────────
+
+export async function forceChangePassword(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const session = await getSession();
+  if (!session) return { error: "Not authenticated." };
+
+  const newPassword = formData.get("newPassword") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+
+  if (!newPassword || !confirmPassword) return { error: "Both fields are required." };
+  if (newPassword !== confirmPassword) return { error: "Passwords do not match." };
+
+  const err = validatePassword(newPassword);
+  if (err) return { error: err };
+
+  const hashed = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({
+    where: { id: session.userId },
+    data: { password: hashed, forcePasswordChange: false },
+  });
+
+  redirect("/admin");
 }

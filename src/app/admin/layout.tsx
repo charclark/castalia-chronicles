@@ -15,6 +15,13 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
+  // If this user's password was reset and they haven't changed it yet, block access.
+  const userRecord = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { forcePasswordChange: true },
+  });
+  if (userRecord?.forcePasswordChange) redirect("/force-change-password");
+
   // Universe selector — archived universes never appear in the sidebar/selector.
   // Super-admin sees all active universes; others see their own + shared ones.
   const universes = session.isSuperAdmin
@@ -95,6 +102,7 @@ export default async function AdminLayout({
         username={session.username}
         universes={universes}
         currentUniverseId={currentUniverseId}
+        isSuperAdmin={session.isSuperAdmin}
       />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -106,6 +114,7 @@ export default async function AdminLayout({
           characters={characters}
           locations={locations}
           images={images}
+          isSuperAdmin={session.isSuperAdmin}
         />
         <main
           style={{

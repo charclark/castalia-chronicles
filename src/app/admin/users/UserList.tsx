@@ -114,7 +114,8 @@ export default function UserList({
   const [deleteError, setDeleteError] = useState("");
 
   async function handleDelete(user: UserRow) {
-    if (!window.confirm(`Delete user "${user.username}"?\n\nThis cannot be undone.`)) return;
+    if (!window.confirm(`STOP. You are about to delete "${user.username}". They will lose all their data. Are you sure?`)) return;
+    if (!window.confirm(`⚠️ DON'T DO THIS. This is permanent and cannot be undone. Are you absolutely certain?`)) return;
     setDeleteError("");
     startDelete(async () => {
       const r = await deleteUser(user.id);

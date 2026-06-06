@@ -18,6 +18,7 @@ export type SidebarData = {
   characters: CharEntry[];
   locations: LocEntry[];
   images: ImgEntry[];
+  isSuperAdmin?: boolean;
 };
 
 // ── Shared styles ────────────────────────────────────────────────────────────
@@ -283,7 +284,7 @@ function PlotChecklistTool({
 
 // ── Main sidebar ─────────────────────────────────────────────────────────────
 
-export default function SidebarClient({ universeId, ideas, notes, plotItems, characters, locations, images }: SidebarData) {
+export default function SidebarClient({ universeId, ideas, notes, plotItems, characters, locations, images, isSuperAdmin }: SidebarData) {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -391,10 +392,9 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
         entryHref={(id) => `/admin/images/${id}`}
       />
 
-      {/* Divider */}
+      {/* Divider + Universe backup — superadmin only */}
+      {isSuperAdmin && <>
       <div style={{ height: "1px", background: "var(--color-border)", margin: "0.75rem 0.75rem 0.5rem" }} />
-
-      {/* Universe backup */}
       <div style={{ padding: "0.25rem 1rem 0.75rem" }}>
         <p style={{ ...sectionLabel, marginBottom: "0.5rem" }}>Story Bible Backup</p>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
@@ -436,6 +436,7 @@ export default function SidebarClient({ universeId, ideas, notes, plotItems, cha
           </a>
         </div>
       </div>
+      </>}
     </aside>
   );
 }

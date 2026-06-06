@@ -11,6 +11,7 @@ function slugify(name: string): string {
 export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  if (!session.isSuperAdmin) return new NextResponse("Forbidden", { status: 403 });
 
   const cookieStore = await cookies();
   const universeId = cookieStore.get("selected-universe")?.value;

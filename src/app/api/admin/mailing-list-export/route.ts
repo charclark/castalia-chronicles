@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const session = await getSession();
   if (!session) return new NextResponse("Unauthorized", { status: 401 });
+  if (!session.isSuperAdmin) return new NextResponse("Forbidden", { status: 403 });
 
   const entries = await prisma.mailingListEntry.findMany({
     orderBy: { createdAt: "asc" },

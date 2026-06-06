@@ -8,26 +8,28 @@ import UniverseSelector from "./UniverseSelector";
 type Universe = { id: string; name: string };
 
 const NAV_LINKS = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/universes", label: "Universes" },
-  { href: "/admin/works", label: "Writing" },
-  { href: "/admin/feedback", label: "Feedback" },
-  { href: "/admin/mailing-list", label: "Mailing List" },
-  { href: "/admin/free-read-stats", label: "Read Stats" },
-  { href: "/admin/about", label: "About Page" },
-  { href: "/admin/restore", label: "Restore" },
-  { href: "/admin/settings", label: "Settings" },
-  { href: "/admin/users", label: "Users" },
+  { href: "/admin", label: "Dashboard", superAdminOnly: false },
+  { href: "/admin/universes", label: "Universes", superAdminOnly: false },
+  { href: "/admin/works", label: "Writing", superAdminOnly: false },
+  { href: "/admin/feedback", label: "Feedback", superAdminOnly: false },
+  { href: "/admin/mailing-list", label: "Mailing List", superAdminOnly: false },
+  { href: "/admin/free-read-stats", label: "Read Stats", superAdminOnly: false },
+  { href: "/admin/about", label: "About Page", superAdminOnly: false },
+  { href: "/admin/restore", label: "Restore", superAdminOnly: true },
+  { href: "/admin/settings", label: "Settings", superAdminOnly: false },
+  { href: "/admin/users", label: "Users", superAdminOnly: true },
 ];
 
 export default function AdminNav({
   username,
   universes,
   currentUniverseId,
+  isSuperAdmin,
 }: {
   username: string;
   universes: Universe[];
   currentUniverseId: string | null;
+  isSuperAdmin: boolean;
 }) {
   const pathname = usePathname();
 
@@ -170,7 +172,7 @@ export default function AdminNav({
         }}
         aria-label="Admin navigation"
       >
-        {NAV_LINKS.map(({ href, label }) => {
+        {NAV_LINKS.filter(({ superAdminOnly }) => !superAdminOnly || isSuperAdmin).map(({ href, label }) => {
           const active = pathname === href;
           return (
             <Link

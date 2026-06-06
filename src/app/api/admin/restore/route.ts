@@ -16,6 +16,7 @@ function bool(v: unknown, fallback = false): boolean {
 export async function POST(req: NextRequest) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session.isSuperAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const cookieStore = await cookies();
   const universeId = cookieStore.get("selected-universe")?.value;

@@ -15,12 +15,13 @@ datasource db {
 // Visitors never log in; only admin users do.
 // isSuperAdmin: true only for Char — bypasses password rules and has full access.
 model User {
-  id               String           @id @default(cuid())
-  username         String           @unique
-  password         String
-  isSuperAdmin     Boolean          @default(false)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                  String           @id @default(cuid())
+  username            String           @unique
+  password            String
+  isSuperAdmin        Boolean          @default(false)
+  forcePasswordChange Boolean          @default(false)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   universeAccess   UniverseAccess[]
   createdUniverses Universe[]       @relation("UniverseCreator")
   archivedUniverses Universe[]      @relation("UniverseArchiver")

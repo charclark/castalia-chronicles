@@ -1,3 +1,4 @@
+import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import MailingListClient from "./MailingListClient";
 import AddSubscriberForm from "./AddSubscriberForm";
@@ -5,6 +6,9 @@ import AddSubscriberForm from "./AddSubscriberForm";
 export const dynamic = "force-dynamic";
 
 export default async function MailingListPage() {
+  const session = await getSession();
+  const isSuperAdmin = session?.isSuperAdmin ?? false;
+
   const entries = await prisma.mailingListEntry.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, name: true, createdAt: true },
@@ -58,7 +62,7 @@ export default async function MailingListPage() {
           </p>
         </div>
 
-        {entries.length > 0 && (
+        {entries.length > 0 && isSuperAdmin && (
           <a
             href="/api/admin/mailing-list-export"
             download
