@@ -9,8 +9,8 @@ type Universe = { id: string; name: string };
 
 const NAV_LINKS = [
   { href: "/admin", label: "Dashboard" },
-  { href: "/admin/works", label: "Writing" },
   { href: "/admin/universes", label: "Universes" },
+  { href: "/admin/works", label: "Writing" },
   { href: "/admin/feedback", label: "Feedback" },
   { href: "/admin/mailing-list", label: "Mailing List" },
   { href: "/admin/free-read-stats", label: "Read Stats" },
