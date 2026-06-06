@@ -6,6 +6,7 @@ export type SessionPayload = {
   userId: string;
   username: string;
   isSuperAdmin: boolean;
+  sessionVersion: number;
 };
 
 function getEncodedKey() {
@@ -72,6 +73,10 @@ export async function getSession(): Promise<SessionPayload | null> {
   const token = cookieStore.get("session")?.value;
   const payload = await decryptSession(token);
   if (!payload) return null;
-  // Back-compat: sessions created before isSuperAdmin was added default to false
-  return { ...payload, isSuperAdmin: payload.isSuperAdmin ?? false };
+  // Back-compat: default fields that didn't exist in older JWTs.
+  return {
+    ...payload,
+    isSuperAdmin: payload.isSuperAdmin ?? false,
+    sessionVersion: payload.sessionVersion ?? 1,
+  };
 }

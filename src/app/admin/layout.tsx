@@ -15,12 +15,15 @@ export default async function AdminLayout({
   const session = await getSession();
   if (!session) redirect("/login");
 
-  // If this user's password was reset and they haven't changed it yet, block access.
+  // Validate session freshness and check for forced password change in one query.
   const userRecord = await prisma.user.findUnique({
     where: { id: session.userId },
-    select: { forcePasswordChange: true },
+    select: { forcePasswordChange: true, sessionVersion: true },
   });
-  if (userRecord?.forcePasswordChange) redirect("/force-change-password");
+  // sessionVersion mismatch means the JWT was issued before a logout or password
+  // reset — treat it as invalid regardless of the cookie still being present.
+  if (!userRecord || userRecord.sessionVersion !== session.sessionVersion) redirect("/login");
+  if (userRecord.forcePasswordChange) redirect("/force-change-password");
 
   // Universe selector — archived universes never appear in the sidebar/selector.
   // Everyone (including superadmin) sees only universes they created or were shared with.

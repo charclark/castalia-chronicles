@@ -34,6 +34,7 @@ export async function login(
     userId: user.id,
     username: user.username,
     isSuperAdmin: user.isSuperAdmin,
+    sessionVersion: user.sessionVersion,
   });
 
   if (user.forcePasswordChange) redirect("/force-change-password");
@@ -41,9 +42,18 @@ export async function login(
 }
 
 export async function logout() {
-  // Inline the cookie-clearing here so it runs inside this "use server" boundary.
-  // Delegating to deleteSession() in session.ts fails because that file is not a
-  // Server Function and Next.js 16 only permits cookies().set() inside one.
+  // Increment sessionVersion first — this immediately invalidates the JWT in the
+  // proxy and admin layout even if the browser's cookie somehow survives the clear.
+  const session = await getSession();
+  if (session?.userId) {
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: { sessionVersion: { increment: 1 } },
+    });
+  }
+
+  // Clear the session cookie directly inside this "use server" function so the
+  // Set-Cookie header is part of the server action response.
   const cookieStore = await cookies();
   cookieStore.set("session", "", {
     httpOnly: true,
@@ -198,7 +208,10 @@ export async function adminResetPassword(
   if (err) return { error: err };
 
   const hashed = await bcrypt.hash(newPassword, 12);
-  await prisma.user.update({ where: { id: userId }, data: { password: hashed, forcePasswordChange: true } });
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashed, forcePasswordChange: true, sessionVersion: { increment: 1 } },
+  });
   return { success: `Password reset for "${user.username}". They will be prompted to change it on next login.` };
 }
 
