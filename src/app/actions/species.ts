@@ -3,10 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUniverseEdit } from "@/lib/auth-utils";
-
-export const STANDARD_SPECIES = [
-  "Human", "Vampire", "Werewolf", "Wizard", "Shapeshifter", "Ghost",
-] as const;
+import { STANDARD_SPECIES } from "@/lib/species-constants";
 
 export async function createSpecies(
   universeId: string,

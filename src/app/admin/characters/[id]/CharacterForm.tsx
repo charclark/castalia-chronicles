@@ -13,6 +13,7 @@ import {
 import { createCustomRole, deleteCustomRole } from "@/app/actions/roles";
 import { createSpecies } from "@/app/actions/species";
 import { DEFAULT_ROLES } from "@/lib/roles-constants";
+import { STANDARD_SPECIES } from "@/lib/species-constants";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -106,12 +107,8 @@ const grid3: React.CSSProperties = {
   gap: "1rem",
 };
 
-// Standard species — locked, cannot be edited or deleted by anyone.
-// Must stay in sync with STANDARD_SPECIES in src/app/actions/species.ts and
-// DEFAULT_SPECIES in ConnectionsMap.tsx.
-const STANDARD_SPECIES = [
-  "Human", "Vampire", "Werewolf", "Wizard", "Shapeshifter", "Ghost",
-] as const;
+// STANDARD_SPECIES is imported from src/lib/species-constants.ts — the single
+// source of truth shared by CharacterForm, species.ts, and ConnectionsMap.
 
 // Preset relationship types — clicking fills the text field; typing anything custom also works
 const REL_PRESETS: { value: string; label: string }[] = [
