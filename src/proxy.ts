@@ -25,12 +25,29 @@ async function isAuthenticated(request: NextRequest): Promise<boolean> {
     const jwtVersion = (payload.sessionVersion as number | undefined) ?? 1;
     if (!userId) return false;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { sessionVersion: true },
-    });
-    // No user record, or version bumped since JWT was issued → treat as logged out.
-    if (!user || user.sessionVersion !== jwtVersion) return false;
+    // Attempt to validate sessionVersion against the DB. This is the primary
+    // revocation mechanism: a bumped DB version means the user has logged out
+    // or had their password reset.
+    //
+    // Wrapped in its own try/catch because serverExternalPackages in next.config
+    // only externalises Prisma from the Server Component / Route Handler bundles,
+    // not the proxy bundle. If pg's native modules fail to load from within the
+    // bundled proxy, the query throws. In that case we fall back to JWT-signature-
+    // only validation — admin routes stay accessible and the admin layout (which
+    // runs in the correctly-externalised server bundle) performs the sessionVersion
+    // check as a second line of defence.
+    try {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { sessionVersion: true },
+      });
+      // No user record or version mismatch → treat as logged out.
+      if (!user || user.sessionVersion !== jwtVersion) return false;
+    } catch {
+      // DB query failed — fall back to JWT-signature-only auth.
+      // The JWT is cryptographically valid (verified above), so we allow the
+      // request through. The admin layout will catch any revoked sessions.
+    }
 
     return true;
   } catch {

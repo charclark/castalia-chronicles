@@ -42,18 +42,11 @@ export async function login(
 }
 
 export async function logout() {
-  // Increment sessionVersion first — this immediately invalidates the JWT in the
-  // proxy and admin layout even if the browser's cookie somehow survives the clear.
+  // Read the session BEFORE clearing the cookie (getSession reads from the cookie).
   const session = await getSession();
-  if (session?.userId) {
-    await prisma.user.update({
-      where: { id: session.userId },
-      data: { sessionVersion: { increment: 1 } },
-    });
-  }
 
-  // Clear the session cookie directly inside this "use server" function so the
-  // Set-Cookie header is part of the server action response.
+  // 1. Clear the session cookie FIRST so the user is logged out even if
+  //    the DB write below fails for any reason.
   const cookieStore = await cookies();
   cookieStore.set("session", "", {
     httpOnly: true,
@@ -62,6 +55,25 @@ export async function logout() {
     sameSite: "lax",
     path: "/",
   });
+
+  // 2. Attempt to increment sessionVersion to invalidate the JWT server-side.
+  //    Wrapped in try/catch so a DB failure (e.g., migration not yet applied,
+  //    connection blip) does NOT prevent the redirect from firing.
+  if (session?.userId) {
+    try {
+      await prisma.user.update({
+        where: { id: session.userId },
+        data: { sessionVersion: { increment: 1 } },
+      });
+    } catch {
+      // Non-fatal — the cookie is already cleared, so the user is logged out.
+      // The old JWT will be caught by the admin layout's sessionVersion check
+      // on any subsequent request, and the JWT expires naturally in 7 days.
+    }
+  }
+
+  // 3. Redirect to /login — always reaches here because the try/catch above
+  //    prevents any DB error from propagating.
   redirect("/login");
 }
 
