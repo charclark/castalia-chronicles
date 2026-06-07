@@ -195,12 +195,7 @@ function WorkSection({
         </h3>
 
         {/* Create button */}
-        <form
-          action={async () => {
-            "use server";
-            await createAction(type);
-          }}
-        >
+        <form action={createAction.bind(null, type)}>
           <button
             type="submit"
             style={{
