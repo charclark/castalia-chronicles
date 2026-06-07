@@ -42,7 +42,6 @@ export async function login(
 }
 
 export async function logout() {
-  console.log("[logout] action called");
   // Read the session BEFORE clearing the cookie (getSession reads from the cookie).
   const session = await getSession();
 
