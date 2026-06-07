@@ -48,16 +48,6 @@ export default async function AdminLayout({
       ? cookieId
       : (universes[0]?.id ?? null);
 
-  // If the cookie is stale (points to a universe the user can no longer access)
-  // write the corrected ID back so API routes that read the raw cookie stay in sync.
-  if (currentUniverseId && currentUniverseId !== cookieId) {
-    cookieStore.set("selected-universe", currentUniverseId, {
-      path: "/",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 365,
-    });
-  }
-
   // Sidebar data — scoped to current universe
   const [ideas, notes, plotItems, characters, locations, images] = currentUniverseId
     ? await Promise.all([
