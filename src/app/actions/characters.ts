@@ -46,6 +46,23 @@ export async function createCharacter(
     },
   });
 
+  const pendingRelStrings = formData.getAll("pendingRel") as string[];
+  if (pendingRelStrings.length > 0) {
+    type PR = { otherId: string; type: string; note: string };
+    const rels: PR[] = pendingRelStrings.map((s) => JSON.parse(s));
+    await prisma.characterRelationship.createMany({
+      data: rels
+        .filter((r) => r.otherId && r.otherId !== newChar.id && r.type?.trim())
+        .map((r) => ({
+          fromCharacterId: newChar.id,
+          toCharacterId: r.otherId,
+          type: r.type.trim(),
+          note: r.note?.trim() || null,
+        })),
+      skipDuplicates: true,
+    });
+  }
+
   revalidatePath("/admin", "layout");
   return { success: "Character created.", id: newChar.id };
 }

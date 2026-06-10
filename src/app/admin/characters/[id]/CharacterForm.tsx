@@ -17,6 +17,8 @@ import { STANDARD_SPECIES } from "@/lib/species-constants";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+type PendingRel = { otherId: string; otherName: string; type: string; note: string };
+
 type CharacterData = {
   id: string;
   name: string;
@@ -354,6 +356,184 @@ function AddRelForm({
   );
 }
 
+// ── Pending relationship row (creation form only) ────────────────────────────
+
+function PendingRelRow({
+  rel,
+  onRemove,
+}: {
+  rel: PendingRel;
+  onRemove: () => void;
+}) {
+  const badge = relBadge(rel.type);
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "0.65rem",
+        padding: "0.55rem 0",
+        borderBottom: "1px solid var(--color-border)",
+      }}
+    >
+      <span
+        style={{
+          ...badge,
+          fontFamily: "var(--font-body)",
+          fontSize: "0.7rem",
+          letterSpacing: "0.1em",
+          textTransform: "capitalize",
+          borderRadius: "2px",
+          padding: "0.15rem 0.5rem",
+          flexShrink: 0,
+        }}
+      >
+        {rel.type}
+      </span>
+      <span style={{ fontFamily: "var(--font-body)", fontSize: "0.95rem", color: "var(--color-ink)", flex: 1 }}>
+        {rel.otherName}
+      </span>
+      {rel.note && (
+        <span style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+          {rel.note}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remove relationship"
+        style={{
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          color: "var(--color-ink-faint)",
+          fontSize: "0.75rem",
+          padding: "0.2rem",
+          opacity: 0.5,
+          flexShrink: 0,
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// ── Pending add relationship form (creation form only) ────────────────────────
+
+function PendingAddRelForm({
+  allChars,
+  onAdd,
+}: {
+  allChars: OtherCharacter[];
+  onAdd: (rel: PendingRel) => void;
+}) {
+  const [toId, setToId] = useState(allChars[0]?.id ?? "");
+  const [type, setType] = useState("friend");
+  const [note, setNote] = useState("");
+
+  if (allChars.length === 0) {
+    return (
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+        No other characters in this universe yet.
+      </p>
+    );
+  }
+
+  function handleAdd() {
+    if (!toId || !type.trim()) return;
+    const other = allChars.find((c) => c.id === toId);
+    if (!other) return;
+    onAdd({ otherId: toId, otherName: other.name, type: type.trim(), note: note.trim() });
+    setNote("");
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", marginTop: "1rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.6rem" }}>
+        <div style={fieldRow}>
+          <label style={labelStyle}>Character</label>
+          <select value={toId} onChange={(e) => setToId(e.target.value)} style={inputStyle}>
+            {allChars.map((c) => (
+              <option key={c.id} value={c.id} style={{ background: "var(--color-bg-elevated)" }}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={fieldRow}>
+          <label style={labelStyle}>Note (optional)</label>
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="e.g. childhood friends"
+            maxLength={100}
+            style={inputStyle}
+          />
+        </div>
+      </div>
+      <div style={fieldRow}>
+        <label style={labelStyle}>Relationship Type</label>
+        <input
+          type="text"
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          placeholder="Type or click a preset below…"
+          style={inputStyle}
+        />
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.3rem", marginTop: "0.4rem" }}>
+          {REL_PRESETS.map((p) => {
+            const active = type === p.value;
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setType(p.value)}
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.72rem",
+                  letterSpacing: "0.04em",
+                  padding: "0.2rem 0.55rem",
+                  borderRadius: "2px",
+                  border: `1px solid ${active ? "var(--color-gold-dim)" : "var(--color-border)"}`,
+                  background: active ? "rgba(201,168,76,0.1)" : "transparent",
+                  color: active ? "var(--color-gold)" : "var(--color-ink-faint)",
+                  cursor: "pointer",
+                  transition: "border-color 0.1s, color 0.1s, background 0.1s",
+                }}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={!toId || !type.trim()}
+          style={{
+            background: (!toId || !type.trim()) ? "var(--color-border)" : "var(--color-bg-elevated)",
+            border: "1px solid var(--color-border-light)",
+            borderRadius: "3px",
+            padding: "0.5rem 1rem",
+            color: "var(--color-ink-muted)",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.88rem",
+            cursor: (!toId || !type.trim()) ? "default" : "pointer",
+          }}
+        >
+          Add Relationship
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main form ────────────────────────────────────────────────────────────────
 
 // ── Role badge colors ─────────────────────────────────────────────────────────
@@ -427,6 +607,7 @@ export default function CharacterForm({
   const saveAction = isNew ? createCharacter : updateCharacter;
   const [formKey, setFormKey] = useState(0);
   const [state, action, savePending] = useActionState(saveAction, null);
+  const [pendingRels, setPendingRels] = useState<PendingRel[]>([]);
   const [deletePending, startDelete] = useTransition();
 
   useEffect(() => {
@@ -845,6 +1026,32 @@ export default function CharacterForm({
         </section>
 
         </fieldset>
+
+        {/* ── Relationships (creation form) ── */}
+        {isNew && canEdit && (
+          <section>
+            <p style={{ ...sectionHead, fontSize: "1.25rem", marginBottom: "1.25rem" }}>Relationships</p>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1rem" }}>
+              Links to other characters — used to auto-draw the Connections Map.
+            </p>
+            {pendingRels.map((r, i) => (
+              <PendingRelRow
+                key={i}
+                rel={r}
+                onRemove={() => setPendingRels((prev) => prev.filter((_, j) => j !== i))}
+              />
+            ))}
+            {pendingRels.length === 0 && (
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "0.5rem" }}>
+                No relationships added yet.
+              </p>
+            )}
+            {pendingRels.map((r, i) => (
+              <input key={i} type="hidden" name="pendingRel" value={JSON.stringify(r)} />
+            ))}
+            <PendingAddRelForm allChars={allChars} onAdd={(r) => setPendingRels((prev) => [...prev, r])} />
+          </section>
+        )}
 
         {/* ── Save / Delete ── */}
         {canEdit && (
