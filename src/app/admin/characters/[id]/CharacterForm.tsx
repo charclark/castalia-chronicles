@@ -142,10 +142,12 @@ function RelRow({
   rel,
   thisId,
   onRemove,
+  canEdit = true,
 }: {
   rel: Relationship;
   thisId: string;
   onRemove: (id: string) => void;
+  canEdit?: boolean;
 }) {
   const other = rel.fromCharacterId === thisId ? rel.toCharacter : rel.fromCharacter;
   const badge = relBadge(rel.type);
@@ -198,25 +200,27 @@ function RelRow({
           {rel.note}
         </span>
       )}
-      <button
-        onClick={() => onRemove(rel.id)}
-        aria-label="Remove relationship"
-        style={{
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--color-ink-faint)",
-          fontSize: "0.75rem",
-          padding: "0.2rem",
-          opacity: 0.5,
-          transition: "opacity 0.15s",
-          flexShrink: 0,
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-        onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
-      >
-        ✕
-      </button>
+      {canEdit && (
+        <button
+          onClick={() => onRemove(rel.id)}
+          aria-label="Remove relationship"
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--color-ink-faint)",
+            fontSize: "0.75rem",
+            padding: "0.2rem",
+            opacity: 0.5,
+            transition: "opacity 0.15s",
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
+        >
+          ✕
+        </button>
+      )}
     </div>
   );
 }
@@ -556,6 +560,7 @@ export default function CharacterForm({
 
       <form key={formKey} action={action} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {character && <input type="hidden" name="id" value={character.id} />}
+        <fieldset disabled={!canEdit} style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}>
 
         {/* ── Identity ── */}
         <section>
@@ -585,8 +590,8 @@ export default function CharacterForm({
           </div>
         </section>
 
-        {/* ── Custom Species ── */}
-        <section>
+        {/* ── Custom Species — edit access only ── */}
+        {canEdit && <section>
           <p style={sectionHead}>Custom Species</p>
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", marginBottom: "0.85rem", fontStyle: "italic" }}>
             Add a custom species for this universe. It will appear in the Character Type dropdown and on the Connections Map.
@@ -672,7 +677,7 @@ export default function CharacterForm({
               </div>
             )}
           </form>
-        </section>
+        </section>}
 
         {/* ── Roles ── */}
         <section>
@@ -841,6 +846,8 @@ export default function CharacterForm({
           </div>
         </section>
 
+        </fieldset>
+
         {/* ── Save / Delete ── */}
         {canEdit && (
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", paddingBottom: "0.5rem" }}>
@@ -910,6 +917,7 @@ export default function CharacterForm({
                   rel={rel}
                   thisId={character.id}
                   onRemove={handleRelRemove}
+                  canEdit={canEdit}
                 />
               ))}
             </div>
@@ -919,12 +927,14 @@ export default function CharacterForm({
             </p>
           )}
 
-          {/* Add relationship */}
-          <AddRelForm
-            thisId={character.id}
-            allChars={allChars}
-            onAdded={() => router.refresh()}
-          />
+          {/* Add relationship — edit access only */}
+          {canEdit && (
+            <AddRelForm
+              thisId={character.id}
+              allChars={allChars}
+              onAdded={() => router.refresh()}
+            />
+          )}
         </section>
       )}
     </div>

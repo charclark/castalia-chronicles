@@ -132,6 +132,7 @@ export default function LocationForm({ location, canEdit = true }: { location?: 
 
       <form key={formKey} action={action} style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
         {location && <input type="hidden" name="id" value={location.id} />}
+        <fieldset disabled={!canEdit} style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}>
 
         {/* ── Identity ── */}
         <section>
@@ -180,6 +181,8 @@ export default function LocationForm({ location, canEdit = true }: { location?: 
             <textarea id="notes" name="notes" defaultValue={location?.notes ?? ""} rows={4} style={taStyle} placeholder="Plot relevance, history, lore, anything else…" />
           </div>
         </section>
+
+        </fieldset>
 
         {/* ── Save / Delete ── */}
         {canEdit && (
