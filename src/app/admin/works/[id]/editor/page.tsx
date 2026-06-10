@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import WritingEditor from "@/components/WritingEditor";
 import { getFlags } from "@/app/actions/flags";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 
 export default async function EditorPage({
   params,
@@ -28,8 +29,11 @@ export default async function EditorPage({
     select: { id: true, title: true, content: true, order: true },
   });
 
+  const canEdit = await getCanEditUniverse(universeId);
+
   // First time opening the chapter editor: seed a Chapter from legacy Work.content
-  if (chapters.length === 0) {
+  // Only do this for users with edit access — view-only users read whatever exists
+  if (chapters.length === 0 && canEdit) {
     const seeded = await prisma.chapter.create({
       data: {
         workId: id,
@@ -53,6 +57,7 @@ export default async function EditorPage({
       savedSnippet={work.snippet}
       backHref={`/admin/works/${work.id}`}
       initialFlags={flags}
+      canEdit={canEdit}
     />
   );
 }

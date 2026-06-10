@@ -643,7 +643,7 @@ export default function WorkDetail({
       <div style={{ marginBottom: "2.5rem" }}>
         <p style={sectionLabel}>Actions</p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          {canEdit && <Link
+          <Link
             href={`/admin/works/${work.id}/editor`}
             style={{
               display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
@@ -657,12 +657,12 @@ export default function WorkDetail({
             onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-gold-dim)")}
           >
             <span style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em", color: "var(--color-gold)" }}>
-              Open in Editor
+              {canEdit ? "Open in Editor" : "Read Chapters"}
             </span>
             <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
-              Write and edit content
+              {canEdit ? "Write and edit content" : "View all written content"}
             </span>
-          </Link>}
+          </Link>
 
           {/* Backup — superadmin only */}
           {isSuperAdmin && <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>

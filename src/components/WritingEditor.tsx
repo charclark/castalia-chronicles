@@ -782,8 +782,9 @@ const ChapterSection = forwardRef<
     onContentSaved: (chapterId: string, html: string) => void;
     chapterNumber: number;
     flags: FlagData[];
+    canEdit?: boolean;
   }
->(({ chapter, workId, onFocus, onWordCount, onContentSaved, chapterNumber, flags }, ref) => {
+>(({ chapter, workId, onFocus, onWordCount, onContentSaved, chapterNumber, flags, canEdit = true }, ref) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flagsRef = useRef<FlagData[]>(flags);
@@ -820,9 +821,11 @@ const ChapterSection = forwardRef<
       }),
     ],
     content: chapter.content || "",
+    editable: canEdit,
     immediatelyRender: false,
     onFocus: ({ editor }) => onFocus(editor, chapter.id),
     onUpdate: ({ editor }) => {
+      if (!canEdit) return;
       onWordCount(chapter.id, countWords(editor.getText()));
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => doSave(editor.getHTML()), 1500);
@@ -1240,6 +1243,7 @@ function ChapterPanel({
   onDeleteRequest,
   onJump,
   onReorder,
+  canEdit = true,
 }: {
   chapters: ChapterData[];
   wordCounts: Record<string, number>;
@@ -1249,6 +1253,7 @@ function ChapterPanel({
   onDeleteRequest: (id: string) => void;
   onJump: (id: string) => void;
   onReorder: (ids: string[]) => void;
+  canEdit?: boolean;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -1315,24 +1320,26 @@ function ChapterPanel({
                   {wc.toLocaleString()}w
                 </span>
               )}
-              <button type="button" title="Rename chapter" onClick={() => startEdit(ch)} style={iconBtn}>✎</button>
-              <button type="button" title="Delete chapter" onClick={() => onDeleteRequest(ch.id)} style={{ ...iconBtn, color: "var(--color-crimson-dim)" }}>✕</button>
+              {canEdit && <button type="button" title="Rename chapter" onClick={() => startEdit(ch)} style={iconBtn}>✎</button>}
+              {canEdit && <button type="button" title="Delete chapter" onClick={() => onDeleteRequest(ch.id)} style={{ ...iconBtn, color: "var(--color-crimson-dim)" }}>✕</button>}
             </div>
           );
         })}
       </div>
 
-      <div style={{ paddingTop: "0.75rem", borderTop: "1px solid var(--color-border)" }}>
-        <button
-          type="button"
-          onClick={onAdd}
-          style={{ width: "100%", background: "transparent", border: "1px dashed var(--color-border)", borderRadius: "3px", padding: "0.5rem", color: "var(--color-gold)", fontFamily: "var(--font-body)", fontSize: "0.82rem", letterSpacing: "0.06em", cursor: "pointer", transition: "border-color 0.15s, background 0.15s" }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-gold-dim)"; e.currentTarget.style.background = "rgba(201,168,76,0.05)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.background = "transparent"; }}
-        >
-          + Add Chapter
-        </button>
-      </div>
+      {canEdit && (
+        <div style={{ paddingTop: "0.75rem", borderTop: "1px solid var(--color-border)" }}>
+          <button
+            type="button"
+            onClick={onAdd}
+            style={{ width: "100%", background: "transparent", border: "1px dashed var(--color-border)", borderRadius: "3px", padding: "0.5rem", color: "var(--color-gold)", fontFamily: "var(--font-body)", fontSize: "0.82rem", letterSpacing: "0.06em", cursor: "pointer", transition: "border-color 0.15s, background 0.15s" }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-gold-dim)"; e.currentTarget.style.background = "rgba(201,168,76,0.05)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.background = "transparent"; }}
+          >
+            + Add Chapter
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1347,6 +1354,7 @@ export default function WritingEditor({
   savedSnippet,
   backHref,
   initialFlags,
+  canEdit = true,
 }: {
   workId: string;
   title: string;
@@ -1355,6 +1363,7 @@ export default function WritingEditor({
   savedSnippet?: string | null;
   backHref: string;
   initialFlags: FlagData[];
+  canEdit?: boolean;
 }) {
   const router = useRouter();
 
@@ -1728,6 +1737,7 @@ export default function WritingEditor({
                 onWordCount={handleWordCount}
                 onContentSaved={handleContentSaved}
                 flags={flags}
+                canEdit={canEdit}
               />
             ))}
             {chapters.length > 1 && (
@@ -1743,33 +1753,35 @@ export default function WritingEditor({
           {panelOpen && (
             <div style={{ flexShrink: 0, width: "250px", position: "sticky", top: 0, maxHeight: "100%", overflowY: "auto", background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "4px", padding: "1rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
 
-              {/* ── Flag buttons ── */}
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  type="button"
-                  title={hasSelection ? "Yellow flag — mark for revisit" : "Select text first"}
-                  disabled={!hasSelection}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // keep editor selection alive
-                    if (hasSelection) handleFlagCreateFromEditor("yellow");
-                  }}
-                  style={flagBtnStyle("yellow", false)}
-                >
-                  <span style={{ color: "#c9a84c" }}>⚑</span> Revisit
-                </button>
-                <button
-                  type="button"
-                  title={hasSelection ? "Red flag — urgent fix needed" : "Select text first"}
-                  disabled={!hasSelection}
-                  onMouseDown={(e) => {
-                    e.preventDefault(); // keep editor selection alive
-                    if (hasSelection) handleFlagCreateFromEditor("red");
-                  }}
-                  style={flagBtnStyle("red", false)}
-                >
-                  <span style={{ color: "#8b2635" }}>⚑</span> Urgent
-                </button>
-              </div>
+              {/* ── Flag buttons — edit access only ── */}
+              {canEdit && (
+                <div style={{ display: "flex", gap: "0.5rem" }}>
+                  <button
+                    type="button"
+                    title={hasSelection ? "Yellow flag — mark for revisit" : "Select text first"}
+                    disabled={!hasSelection}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // keep editor selection alive
+                      if (hasSelection) handleFlagCreateFromEditor("yellow");
+                    }}
+                    style={flagBtnStyle("yellow", false)}
+                  >
+                    <span style={{ color: "#c9a84c" }}>⚑</span> Revisit
+                  </button>
+                  <button
+                    type="button"
+                    title={hasSelection ? "Red flag — urgent fix needed" : "Select text first"}
+                    disabled={!hasSelection}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // keep editor selection alive
+                      if (hasSelection) handleFlagCreateFromEditor("red");
+                    }}
+                    style={flagBtnStyle("red", false)}
+                  >
+                    <span style={{ color: "#8b2635" }}>⚑</span> Urgent
+                  </button>
+                </div>
+              )}
 
               {/* ── Flag list ── */}
               {sortedFlags.length > 0 ? (
@@ -1801,23 +1813,25 @@ export default function WritingEditor({
                             "{flag.snippet}"
                           </span>
                         </button>
-                        <button
-                          type="button"
-                          title="Resolve / delete flag"
-                          onClick={() => handleFlagDelete(flag.id)}
-                          style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--color-ink-faint)", fontFamily: "var(--font-body)", fontSize: "0.75rem", padding: "0 0.15rem", flexShrink: 0, lineHeight: 1, marginTop: "0.15rem" }}
-                        >
-                          ✕
-                        </button>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            title="Resolve / delete flag"
+                            onClick={() => handleFlagDelete(flag.id)}
+                            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--color-ink-faint)", fontFamily: "var(--font-body)", fontSize: "0.75rem", padding: "0 0.15rem", flexShrink: 0, lineHeight: 1, marginTop: "0.15rem" }}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-              ) : (
+              ) : canEdit ? (
                 <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-ink-faint)", fontStyle: "italic", margin: 0 }}>
                   No flags yet. Select text and click a flag button.
                 </p>
-              )}
+              ) : null}
 
               <div style={{ height: "1px", background: "var(--color-border)" }} />
 
@@ -1842,6 +1856,7 @@ export default function WritingEditor({
                 onDeleteRequest={(id) => setConfirmDeleteId(id)}
                 onJump={handleJump}
                 onReorder={handleReorder}
+                canEdit={canEdit}
               />
             </div>
           )}
