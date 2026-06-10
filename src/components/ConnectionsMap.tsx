@@ -102,37 +102,10 @@ function LegendShape({ shape, color, size = 10 }: { shape: Shape; color: string;
   return <svg width={s * 2} height={s * 2} style={{ flexShrink: 0 }}><circle cx={s} cy={s} r={s} fill={color} opacity={0.85} /></svg>;
 }
 
-// ── Role system ──────────────────────────────────────────────────────────────
+// ── Node size ─────────────────────────────────────────────────────────────────
 
-// Lower rank = more important = larger node
-const ROLE_SIZE_RANK: Record<string, number> = {
-  Protagonist: 0,
-  Antagonist:  1,
-  Principal:   2,
-  Wildcard:    3,
-  Catalyst:    3,
-  Supporting:  4,
-  Shadow:      5,
-  Minor:       5,
-};
-const ROLE_SIZE_MULTIPLIERS = [1.75, 1.45, 1.25, 1.1, 1.0, 0.82];
-const BASE_R = 22;
-
-function getRoleRadius(roles: string[]): number {
-  if (!roles || roles.length === 0) return BASE_R;
-  const bestRank = Math.min(...roles.map((r) => ROLE_SIZE_RANK[r] ?? 4));
-  return Math.round(BASE_R * (ROLE_SIZE_MULTIPLIERS[Math.min(bestRank, ROLE_SIZE_MULTIPLIERS.length - 1)] ?? 1));
-}
-
-// Returns the display label for the legend
-const ROLE_SIZE_LABELS: [string, number][] = [
-  ["Protagonist", 0],
-  ["Antagonist",  1],
-  ["Principal",   2],
-  ["Wildcard / Catalyst", 3],
-  ["Supporting",  4],
-  ["Shadow / Minor", 5],
-];
+// Fixed small uniform radius for all nodes — matches the style of the species legend
+const NODE_R = 7;
 
 // ── Relationship styling ─────────────────────────────────────────────────────
 
@@ -375,11 +348,6 @@ export default function ConnectionsMap() {
   // All unique species present in the current data
   const presentSpeciesNames = [...new Set(nodes.map((n) => n.characterType))].sort();
 
-  // All unique roles present in the current data (for legend)
-  const presentRoles = [...new Set(Object.values(charRoles).flat())].sort(
-    (a, b) => (ROLE_SIZE_RANK[a] ?? 99) - (ROLE_SIZE_RANK[b] ?? 99)
-  );
-
   return (
     <div ref={containerRef} style={{ flex: 1, position: "relative", overflow: "hidden", cursor: dragState.current ? "grabbing" : "grab" }}>
       <svg
@@ -409,14 +377,12 @@ export default function ConnectionsMap() {
           {edges.map((e) => {
             const a = nodeById.get(e.from), b = nodeById.get(e.to);
             if (!a || !b) return null;
-            const rA = getRoleRadius(charRoles[e.from] ?? []);
-            const rB = getRoleRadius(charRoles[e.to] ?? []);
             const dx = b.x - a.x, dy = b.y - a.y;
             const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            const x1 = a.x + (dx / dist) * (rA + 2);
-            const y1 = a.y + (dy / dist) * (rA + 2);
-            const x2 = b.x - (dx / dist) * (rB + 10);
-            const y2 = b.y - (dy / dist) * (rB + 10);
+            const x1 = a.x + (dx / dist) * (NODE_R + 2);
+            const y1 = a.y + (dy / dist) * (NODE_R + 2);
+            const x2 = b.x - (dx / dist) * (NODE_R + 10);
+            const y2 = b.y - (dy / dist) * (NODE_R + 10);
             const isKnown = e.type in REL_COLOR;
             const color = isKnown ? REL_COLOR[e.type] : CUSTOM_COLOR;
             const dash = REL_DASH[e.type] ?? "none";
@@ -440,15 +406,14 @@ export default function ConnectionsMap() {
           {/* ── Nodes ── */}
           {nodes.map((n) => {
             const sp = getSpeciesInfo(n.characterType, customSpecies);
-            const r = getRoleRadius(charRoles[n.id] ?? []);
             return (
               <g key={n.id} data-node="true" style={{ cursor: "pointer" }}
                 onClick={() => router.push(`/admin/characters/${n.id}`)}>
-                {/* Hover glow (circle regardless of shape) */}
-                <circle cx={n.x} cy={n.y} r={r + 5} fill="none" stroke="var(--color-gold)" strokeWidth={1.5} opacity={0} className="node-glow" />
-                {/* Species shape with role-based size */}
+                {/* Hover glow */}
+                <circle cx={n.x} cy={n.y} r={NODE_R + 5} fill="none" stroke="var(--color-gold)" strokeWidth={1.5} opacity={0} className="node-glow" />
+                {/* Small uniform species symbol */}
                 <NodeShape
-                  cx={n.x} cy={n.y} r={r}
+                  cx={n.x} cy={n.y} r={NODE_R}
                   shape={sp.shape} color={sp.color}
                   onMouseEnter={(e) => {
                     const g = (e.currentTarget as SVGElement).parentElement;
@@ -461,8 +426,19 @@ export default function ConnectionsMap() {
                     if (glow) glow.setAttribute("opacity", "0");
                   }}
                 />
-                {/* Name label — offset by actual radius */}
-                <text x={n.x} y={n.y + r + 16} textAnchor="middle" fill="var(--color-ink)" fontSize={12} fontFamily="var(--font-heading)" fontWeight={400} style={{ pointerEvents: "none" }}>
+                {/* Name label — to the right of the symbol, with stroke halo for readability */}
+                <text
+                  x={n.x + NODE_R + 5}
+                  y={n.y + 4}
+                  textAnchor="start"
+                  fill="var(--color-ink)"
+                  fontSize={11}
+                  fontFamily="var(--font-body)"
+                  stroke="var(--color-bg)"
+                  strokeWidth={3}
+                  paintOrder="stroke"
+                  style={{ pointerEvents: "none" }}
+                >
                   {n.name}
                 </text>
               </g>
@@ -514,36 +490,6 @@ export default function ConnectionsMap() {
             </div>
           );
         })}
-
-        {/* Role size legend — only shown if any roles are present */}
-        {presentRoles.length > 0 && (
-          <>
-            <div style={{ height: "1px", background: "var(--color-border)", margin: "0.15rem 0" }} />
-            {ROLE_SIZE_LABELS.filter(([label]) => {
-              // Show only ranks present in the data
-              const rank = ROLE_SIZE_RANK[label as string] ?? 99;
-              const normalisedRank = rank;
-              // Check if any present role maps to this rank or similar label group
-              return presentRoles.some((r) => {
-                const rRank = ROLE_SIZE_RANK[r] ?? 99;
-                return rRank === normalisedRank ||
-                  (label === "Wildcard / Catalyst" && (r === "Wildcard" || r === "Catalyst")) ||
-                  (label === "Shadow / Minor" && (r === "Shadow" || r === "Minor"));
-              });
-            }).map(([label, rank]) => {
-              const r = Math.round(BASE_R * (ROLE_SIZE_MULTIPLIERS[rank] ?? 1));
-              const displayR = Math.max(4, Math.round(r * 0.38));
-              return (
-                <div key={label} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <svg width={22} height={22} style={{ flexShrink: 0 }}>
-                    <circle cx={11} cy={11} r={displayR} fill="var(--color-ink-faint)" opacity={0.6} />
-                  </svg>
-                  <span style={{ fontFamily: "var(--font-body)", fontSize: "0.7rem", letterSpacing: "0.06em", color: "var(--color-ink-muted)" }}>{label}</span>
-                </div>
-              );
-            })}
-          </>
-        )}
 
         <p style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginTop: "0.2rem" }}>
           Drag · scroll to zoom · click node
