@@ -301,25 +301,30 @@ export default async function AdminDashboard({
                   Share
                 </Link>
               )}
-              <a
-                href="/api/admin/backup/universe?format=docx"
-                download
-                className="admin-download-btn"
-                style={{
-                  fontFamily: "var(--font-body)",
-                  fontSize: "0.75rem",
-                  color: "var(--color-ink-muted)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "3px",
-                  padding: "0.25rem 0.6rem",
-                  background: "transparent",
-                  textDecoration: "none",
-                  letterSpacing: "0.04em",
-                  transition: "border-color 0.15s, color 0.15s",
-                }}
-              >
-                ↓ Download
-              </a>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+                <a
+                  href="/api/admin/backup/universe?format=docx"
+                  download
+                  className="admin-download-btn"
+                  style={{
+                    fontFamily: "var(--font-body)",
+                    fontSize: "0.75rem",
+                    color: "var(--color-ink-muted)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "3px",
+                    padding: "0.25rem 0.6rem",
+                    background: "transparent",
+                    textDecoration: "none",
+                    letterSpacing: "0.04em",
+                    transition: "border-color 0.15s, color 0.15s",
+                  }}
+                >
+                  ↓ Download
+                </a>
+                <span style={{ fontFamily: "var(--font-body)", fontSize: "0.65rem", color: "var(--color-ink-faint)", fontStyle: "italic", lineHeight: 1.4, maxWidth: "180px" }}>
+                  Characters, locations, notes & plot. Books must be downloaded separately from Writing.
+                </span>
+              </div>
               <Link
                 href="/admin/works"
                 style={{

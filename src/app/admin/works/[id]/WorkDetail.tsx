@@ -665,27 +665,32 @@ export default function WorkDetail({
           </Link>
 
           {/* Download — visible to all users with access */}
-          <a
-            href={`/api/admin/backup/work/${work.id}?format=docx`}
-            download
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
-              background: "transparent",
-              border: "1px solid var(--color-border)",
-              borderRadius: "4px", padding: "0.85rem 1.25rem",
-              textDecoration: "none", minWidth: "160px",
-              transition: "border-color 0.15s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-border-light)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
-          >
-            <span style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em", color: "var(--color-ink-muted)" }}>
-              ↓ Download
-            </span>
-            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
-              Word document (.docx)
-            </span>
-          </a>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+            <a
+              href={`/api/admin/backup/work/${work.id}?format=docx`}
+              download
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
+                background: "transparent",
+                border: "1px solid var(--color-border)",
+                borderRadius: "4px", padding: "0.85rem 1.25rem",
+                textDecoration: "none", minWidth: "160px",
+                transition: "border-color 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-border-light)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
+            >
+              <span style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em", color: "var(--color-ink-muted)" }}>
+                ↓ Download
+              </span>
+              <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+                Word document (.docx)
+              </span>
+            </a>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic", lineHeight: 1.45, margin: 0, maxWidth: "200px" }}>
+              Downloads this work only. Each book or short story must be downloaded separately.
+            </p>
+          </div>
 
           {/* JSON backup — superadmin only */}
           {isSuperAdmin && (
