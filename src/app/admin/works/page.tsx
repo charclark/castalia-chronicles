@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import { createWork } from "@/app/actions/works";
 import WorkSharePopup from "./WorkSharePopup";
 
@@ -34,21 +35,7 @@ export default async function WorksPage({
     },
   });
 
-  // Does current user have edit access (to show Share buttons)?
-  const universeRecord = await prisma.universe.findUnique({
-    where: { id: universeId },
-    select: {
-      createdByUserId: true,
-      accesses: {
-        where: { userId: session?.userId, permission: "edit" },
-        select: { id: true },
-      },
-    },
-  });
-  const canShare =
-    universeRecord?.createdByUserId === session?.userId ||
-    (universeRecord?.createdByUserId === null && (session?.isSuperAdmin ?? false)) ||
-    (universeRecord?.accesses.length ?? 0) > 0;
+  const canShare = await getCanEditUniverse(universeId);
 
   // Share popup data
   let shareWork: { id: string; title: string } | null = null;
@@ -194,26 +181,28 @@ function WorkSection({
           )}
         </h3>
 
-        {/* Create button */}
-        <form action={createAction.bind(null, type)}>
-          <button
-            type="submit"
-            style={{
-              fontFamily: "var(--font-heading)",
-              fontSize: "0.9rem",
-              letterSpacing: "0.06em",
-              color: "var(--color-gold)",
-              background: "transparent",
-              border: "1px solid var(--color-gold-dim)",
-              borderRadius: "3px",
-              padding: "0.3rem 0.85rem",
-              cursor: "pointer",
-              transition: "border-color 0.15s, color 0.15s",
-            }}
-          >
-            + New {type === "book" ? "Book" : "Short Story"}
-          </button>
-        </form>
+        {/* Create button — only for users with edit access */}
+        {canShare && (
+          <form action={createAction.bind(null, type)}>
+            <button
+              type="submit"
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: "0.9rem",
+                letterSpacing: "0.06em",
+                color: "var(--color-gold)",
+                background: "transparent",
+                border: "1px solid var(--color-gold-dim)",
+                borderRadius: "3px",
+                padding: "0.3rem 0.85rem",
+                cursor: "pointer",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+            >
+              + New {type === "book" ? "Book" : "Short Story"}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* List */}

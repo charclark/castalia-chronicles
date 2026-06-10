@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import EntryEditor from "@/components/EntryEditor";
 import { updateNote, deleteNote } from "@/app/actions/notes";
 
@@ -15,7 +16,10 @@ export default async function NotePage({
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) notFound();
 
-  const note = await prisma.note.findFirst({ where: { id, universeId } });
+  const [note, canEdit] = await Promise.all([
+    prisma.note.findFirst({ where: { id, universeId } }),
+    getCanEditUniverse(universeId),
+  ]);
   if (!note) notFound();
 
   return (
@@ -27,6 +31,7 @@ export default async function NotePage({
       saveAction={updateNote}
       deleteAction={deleteNote}
       typeName="Note"
+      readOnly={!canEdit}
     />
   );
 }

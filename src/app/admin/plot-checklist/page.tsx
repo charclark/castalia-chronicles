@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import PlotChecklistClient from "./PlotChecklistClient";
 
 export default async function PlotChecklistPage() {
@@ -8,10 +9,13 @@ export default async function PlotChecklistPage() {
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) notFound();
 
-  const items = await prisma.plotItem.findMany({
-    where: { universeId },
-    orderBy: [{ checked: "asc" }, { createdAt: "asc" }],
-  });
+  const [items, canEdit] = await Promise.all([
+    prisma.plotItem.findMany({
+      where: { universeId },
+      orderBy: [{ checked: "asc" }, { createdAt: "asc" }],
+    }),
+    getCanEditUniverse(universeId),
+  ]);
 
   return (
     <div style={{ maxWidth: "680px" }}>
@@ -43,6 +47,7 @@ export default async function PlotChecklistPage() {
           text: i.text,
           checked: i.checked,
         }))}
+        canEdit={canEdit}
       />
     </div>
   );

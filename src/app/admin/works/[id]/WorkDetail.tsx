@@ -574,10 +574,12 @@ export default function WorkDetail({
   work,
   availableImages,
   isSuperAdmin,
+  canEdit = true,
 }: {
   work: WorkMeta;
   availableImages: ImageOption[];
   isSuperAdmin: boolean;
+  canEdit?: boolean;
 }) {
   const router = useRouter();
   const [renameState, renameAction, renamePending] = useActionState(renameWork, null);
@@ -641,7 +643,7 @@ export default function WorkDetail({
       <div style={{ marginBottom: "2.5rem" }}>
         <p style={sectionLabel}>Actions</p>
         <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-          <Link
+          {canEdit && <Link
             href={`/admin/works/${work.id}/editor`}
             style={{
               display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
@@ -660,7 +662,7 @@ export default function WorkDetail({
             <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
               Write and edit content
             </span>
-          </Link>
+          </Link>}
 
           {/* Backup — superadmin only */}
           {isSuperAdmin && <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
@@ -705,145 +707,152 @@ export default function WorkDetail({
       <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
 
       {/* ── Publishing section ── */}
-      <div style={{ marginBottom: "2rem" }}>
-        <PublishingSection work={work} />
-      </div>
-
-      <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-
-      {/* ── Rename form ── */}
-      <form action={renameAction} style={{ marginBottom: "2rem" }}>
-        <input type="hidden" name="id" value={work.id} />
-        <div style={fieldRow}>
-          <label htmlFor="title" style={fieldLabel}>{typeLabel} Title</label>
-          <input
-            id="title" name="title" type="text"
-            defaultValue={work.title} required style={inputStyle}
-          />
-        </div>
-
-        {renameState?.error && (
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.5rem" }}>
-            {renameState.error}
-          </p>
-        )}
-        {renameState?.success && (
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d", marginTop: "0.5rem" }}>
-            {renameState.success}
-          </p>
-        )}
-
-        <button
-          type="submit" disabled={renamePending}
-          style={{
-            marginTop: "0.85rem",
-            background: renamePending ? "var(--color-border)" : "var(--color-crimson)",
-            border: "none", borderRadius: "3px",
-            padding: "0.6rem 1.25rem", color: "var(--color-ink)",
-            fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em",
-            cursor: renamePending ? "default" : "pointer",
-          }}
-        >
-          {renamePending ? "Saving…" : "Save Title"}
-        </button>
-      </form>
-
-      {/* ── Cover image selector (books only) ── */}
-      {isBook && (
+      {canEdit && (
         <>
+          <div style={{ marginBottom: "2rem" }}>
+            <PublishingSection work={work} />
+          </div>
           <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-          <form action={coverAction} style={{ marginBottom: "2rem" }}>
+        </>
+      )}
+
+      {canEdit && (
+        <>
+          {/* ── Rename form ── */}
+          <form action={renameAction} style={{ marginBottom: "2rem" }}>
             <input type="hidden" name="id" value={work.id} />
             <div style={fieldRow}>
-              <label htmlFor="coverImageId" style={fieldLabel}>Cover Image</label>
-              {availableImages.length === 0 ? (
-                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
-                  No images uploaded yet. Upload images via the sidebar Images tool to assign a cover.
-                </p>
-              ) : (
-                <>
-                  <select id="coverImageId" name="coverImageId" defaultValue={work.coverImageId ?? ""} style={selectStyle}>
-                    <option value="">— No cover image —</option>
-                    {availableImages.map((img) => (
-                      <option key={img.id} value={img.id} style={{ background: "var(--color-bg-elevated)" }}>
-                        {img.label}{img.category !== "other" ? ` (${img.category})` : ""}
-                      </option>
-                    ))}
-                  </select>
-
-                  {work.coverImage && (
-                    <div style={{ marginTop: "0.75rem", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--color-border)", maxWidth: "200px" }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/api/images/${work.coverImage.id}`} alt={work.coverImage.label}
-                        style={{ display: "block", width: "100%", height: "auto" }} />
-                    </div>
-                  )}
-
-                  {coverState?.error && (
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.5rem" }}>
-                      {coverState.error}
-                    </p>
-                  )}
-                  {coverState?.success && (
-                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d", marginTop: "0.5rem" }}>
-                      {coverState.success}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit" disabled={coverPending}
-                    style={{
-                      marginTop: "0.75rem",
-                      background: coverPending ? "var(--color-border)" : "var(--color-crimson)",
-                      border: "none", borderRadius: "3px",
-                      padding: "0.6rem 1.25rem", color: "var(--color-ink)",
-                      fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em",
-                      cursor: coverPending ? "default" : "pointer",
-                    }}
-                  >
-                    {coverPending ? "Saving…" : "Save Cover"}
-                  </button>
-                </>
-              )}
+              <label htmlFor="title" style={fieldLabel}>{typeLabel} Title</label>
+              <input
+                id="title" name="title" type="text"
+                defaultValue={work.title} required style={inputStyle}
+              />
             </div>
+
+            {renameState?.error && (
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.5rem" }}>
+                {renameState.error}
+              </p>
+            )}
+            {renameState?.success && (
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d", marginTop: "0.5rem" }}>
+                {renameState.success}
+              </p>
+            )}
+
+            <button
+              type="submit" disabled={renamePending}
+              style={{
+                marginTop: "0.85rem",
+                background: renamePending ? "var(--color-border)" : "var(--color-crimson)",
+                border: "none", borderRadius: "3px",
+                padding: "0.6rem 1.25rem", color: "var(--color-ink)",
+                fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em",
+                cursor: renamePending ? "default" : "pointer",
+              }}
+            >
+              {renamePending ? "Saving…" : "Save Title"}
+            </button>
           </form>
+
+          {/* ── Cover image selector (books only) ── */}
+          {isBook && (
+            <>
+              <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+              <form action={coverAction} style={{ marginBottom: "2rem" }}>
+                <input type="hidden" name="id" value={work.id} />
+                <div style={fieldRow}>
+                  <label htmlFor="coverImageId" style={fieldLabel}>Cover Image</label>
+                  {availableImages.length === 0 ? (
+                    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+                      No images uploaded yet. Upload images via the sidebar Images tool to assign a cover.
+                    </p>
+                  ) : (
+                    <>
+                      <select id="coverImageId" name="coverImageId" defaultValue={work.coverImageId ?? ""} style={selectStyle}>
+                        <option value="">— No cover image —</option>
+                        {availableImages.map((img) => (
+                          <option key={img.id} value={img.id} style={{ background: "var(--color-bg-elevated)" }}>
+                            {img.label}{img.category !== "other" ? ` (${img.category})` : ""}
+                          </option>
+                        ))}
+                      </select>
+
+                      {work.coverImage && (
+                        <div style={{ marginTop: "0.75rem", borderRadius: "3px", overflow: "hidden", border: "1px solid var(--color-border)", maxWidth: "200px" }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={`/api/images/${work.coverImage.id}`} alt={work.coverImage.label}
+                            style={{ display: "block", width: "100%", height: "auto" }} />
+                        </div>
+                      )}
+
+                      {coverState?.error && (
+                        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginTop: "0.5rem" }}>
+                          {coverState.error}
+                        </p>
+                      )}
+                      {coverState?.success && (
+                        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d", marginTop: "0.5rem" }}>
+                          {coverState.success}
+                        </p>
+                      )}
+
+                      <button
+                        type="submit" disabled={coverPending}
+                        style={{
+                          marginTop: "0.75rem",
+                          background: coverPending ? "var(--color-border)" : "var(--color-crimson)",
+                          border: "none", borderRadius: "3px",
+                          padding: "0.6rem 1.25rem", color: "var(--color-ink)",
+                          fontFamily: "var(--font-heading)", fontSize: "0.95rem", letterSpacing: "0.06em",
+                          cursor: coverPending ? "default" : "pointer",
+                        }}
+                      >
+                        {coverPending ? "Saving…" : "Save Cover"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </form>
+            </>
+          )}
+
+          {/* ── Description & Buy Links (books only) ── */}
+          {isBook && (
+            <>
+              <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+              <div style={{ marginBottom: "2rem" }}>
+                <DescriptionEditor work={work} />
+              </div>
+              <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+              <div style={{ marginBottom: "2rem" }}>
+                <BuyLinksEditor work={work} />
+              </div>
+            </>
+          )}
+
+          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+
+          {/* ── Delete ── */}
+          <div>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-ink-muted)", marginBottom: "0.6rem" }}>
+              Danger Zone
+            </p>
+            <button
+              type="button" onClick={handleDelete} disabled={deletePending}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--color-crimson-dim)",
+                borderRadius: "3px", padding: "0.6rem 1.1rem",
+                color: "#d4848e", fontFamily: "var(--font-body)", fontSize: "0.88rem",
+                cursor: deletePending ? "default" : "pointer",
+              }}
+            >
+              {deletePending ? "Deleting…" : `Delete ${typeLabel}`}
+            </button>
+          </div>
         </>
       )}
-
-      {/* ── Description & Buy Links (books only) ── */}
-      {isBook && (
-        <>
-          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-          <div style={{ marginBottom: "2rem" }}>
-            <DescriptionEditor work={work} />
-          </div>
-          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-          <div style={{ marginBottom: "2rem" }}>
-            <BuyLinksEditor work={work} />
-          </div>
-        </>
-      )}
-
-      <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-
-      {/* ── Delete ── */}
-      <div>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-ink-muted)", marginBottom: "0.6rem" }}>
-          Danger Zone
-        </p>
-        <button
-          type="button" onClick={handleDelete} disabled={deletePending}
-          style={{
-            background: "transparent",
-            border: "1px solid var(--color-crimson-dim)",
-            borderRadius: "3px", padding: "0.6rem 1.1rem",
-            color: "#d4848e", fontFamily: "var(--font-body)", fontSize: "0.88rem",
-            cursor: deletePending ? "default" : "pointer",
-          }}
-        >
-          {deletePending ? "Deleting…" : `Delete ${typeLabel}`}
-        </button>
-      </div>
     </div>
   );
 }

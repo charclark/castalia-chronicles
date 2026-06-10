@@ -32,7 +32,6 @@ export async function GET(
   if (!universeAccess) return new NextResponse("Universe not found", { status: 404 });
   const hasAccess =
     universeAccess.createdByUserId === session.userId ||
-    (universeAccess.createdByUserId === null && session.isSuperAdmin) ||
     universeAccess.accesses.length > 0;
   if (!hasAccess) return new NextResponse("Forbidden", { status: 403 });
 

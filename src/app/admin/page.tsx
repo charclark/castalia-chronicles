@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import UniverseSharePanel from "./UniverseSharePanel";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,6 @@ export default async function AdminDashboard({
       archivedAt: null,
       OR: [
         { createdByUserId: session?.userId },
-        ...(session?.isSuperAdmin ? [{ createdByUserId: null }] : []),
         { accesses: { some: { userId: session?.userId } } },
       ],
     },
@@ -45,9 +45,7 @@ export default async function AdminDashboard({
       },
     });
 
-    const isCreator =
-      universeRecord?.createdByUserId === session?.userId ||
-      (universeRecord?.createdByUserId === null && session?.isSuperAdmin);
+    const isCreator = universeRecord?.createdByUserId === session?.userId;
     const editAccess = universeRecord?.accesses.find(
       (a) => a.userId === session?.userId && a.permission === "edit"
     );
@@ -182,6 +180,11 @@ export default async function AdminDashboard({
         ])
       : [0, 0, [], [], 0, 0, 0];
 
+  // Does the current user have edit access to this universe?
+  const canEditCurrentUniverse = currentUniverse
+    ? await getCanEditUniverse(currentUniverse.id)
+    : false;
+
   // Does the current user have edit access to share this universe?
   let canShareCurrentUniverse = false;
   if (currentUniverse) {
@@ -197,7 +200,6 @@ export default async function AdminDashboard({
     });
     canShareCurrentUniverse =
       universeRecord?.createdByUserId === session?.userId ||
-      (universeRecord?.createdByUserId === null && (session?.isSuperAdmin ?? false)) ||
       (universeRecord?.accesses.length ?? 0) > 0;
   }
 
@@ -348,7 +350,7 @@ export default async function AdminDashboard({
           count={charCount as number}
           countLabel="character"
           href={currentUniverse && (charCount as number) > 0 ? "?popup=characters" : ""}
-          addHref="/admin/characters/new"
+          addHref={canEditCurrentUniverse ? "/admin/characters/new" : undefined}
           addLabel="+Character"
           style={cardBase}
           hasUniverse={!!currentUniverse}
@@ -363,7 +365,7 @@ export default async function AdminDashboard({
           count={locCount as number}
           countLabel="location"
           href={currentUniverse && (locCount as number) > 0 ? "?popup=locations" : ""}
-          addHref="/admin/locations/new"
+          addHref={canEditCurrentUniverse ? "/admin/locations/new" : undefined}
           addLabel="+Location"
           style={cardBase}
           hasUniverse={!!currentUniverse}
@@ -380,27 +382,29 @@ export default async function AdminDashboard({
               {(workCount as number) > 0 ? `${workCount} work${(workCount as number) !== 1 ? "s" : ""}` : "Books & short stories"}
             </p>
           </Link>
-          <div style={{ marginTop: "0.75rem" }}>
-            <Link
-              href="/admin/works"
-              className="admin-add-btn"
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.82rem",
-                color: "var(--color-gold)",
-                border: "1px solid var(--color-gold-dim)",
-                borderRadius: "3px",
-                padding: "0.25rem 0.65rem",
-                background: "transparent",
-                textDecoration: "none",
-                letterSpacing: "0.05em",
-                transition: "border-color 0.15s",
-                display: "inline-block",
-              }}
-            >
-              +Write
-            </Link>
-          </div>
+          {canEditCurrentUniverse && (
+            <div style={{ marginTop: "0.75rem" }}>
+              <Link
+                href="/admin/works"
+                className="admin-add-btn"
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.82rem",
+                  color: "var(--color-gold)",
+                  border: "1px solid var(--color-gold-dim)",
+                  borderRadius: "3px",
+                  padding: "0.25rem 0.65rem",
+                  background: "transparent",
+                  textDecoration: "none",
+                  letterSpacing: "0.05em",
+                  transition: "border-color 0.15s",
+                  display: "inline-block",
+                }}
+              >
+                +Write
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Feedback */}

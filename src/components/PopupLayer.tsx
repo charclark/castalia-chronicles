@@ -292,6 +292,7 @@ export default function PopupLayer({
   locations,
   images,
   universeId,
+  canEdit = true,
 }: {
   ideas: TextEntry[];
   notes: TextEntry[];
@@ -299,6 +300,7 @@ export default function PopupLayer({
   locations: LocationEntry[];
   images: ImageEntry[];
   universeId: string | null;
+  canEdit?: boolean;
 }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -364,37 +366,37 @@ export default function PopupLayer({
 
   if (popup === "ideas") {
     title = "Storyline Ideas";
-    newHref = "/admin/storyline-ideas/new";
+    newHref = canEdit ? "/admin/storyline-ideas/new" : "";
     content = ideas.length === 0
-      ? <EmptyState title={title} newHref={newHref} />
+      ? <EmptyState title={title} newHref={newHref} canEdit={canEdit} />
       : <CardGrid>{ideas.map((e) => <TextCard key={e.id} entry={e} href={`/admin/storyline-ideas/${e.id}`} />)}</CardGrid>;
 
   } else if (popup === "notes") {
     title = "General Notes";
-    newHref = "/admin/notes/new";
+    newHref = canEdit ? "/admin/notes/new" : "";
     content = notes.length === 0
-      ? <EmptyState title={title} newHref={newHref} />
+      ? <EmptyState title={title} newHref={newHref} canEdit={canEdit} />
       : <CardGrid>{notes.map((e) => <TextCard key={e.id} entry={e} href={`/admin/notes/${e.id}`} />)}</CardGrid>;
 
   } else if (popup === "characters") {
     title = "Characters";
-    newHref = "/admin/characters/new";
+    newHref = canEdit ? "/admin/characters/new" : "";
     content = characters.length === 0
-      ? <EmptyState title={title} newHref={newHref} />
+      ? <EmptyState title={title} newHref={newHref} canEdit={canEdit} />
       : <CardGrid>{characters.map((c) => <CharacterCard key={c.id} char={c} href={`/admin/characters/${c.id}`} />)}</CardGrid>;
 
   } else if (popup === "locations") {
     title = "Locations";
-    newHref = "/admin/locations/new";
+    newHref = canEdit ? "/admin/locations/new" : "";
     content = locations.length === 0
-      ? <EmptyState title={title} newHref={newHref} />
+      ? <EmptyState title={title} newHref={newHref} canEdit={canEdit} />
       : <CardGrid>{locations.map((l) => <LocationCard key={l.id} loc={l} href={`/admin/locations/${l.id}`} />)}</CardGrid>;
 
   } else if (popup === "images") {
     title = "Images";
-    newHref = "/admin/images/new";
+    newHref = canEdit ? "/admin/images/new" : "";
     content = images.length === 0
-      ? <EmptyState title={title} newHref={newHref} />
+      ? <EmptyState title={title} newHref={newHref} canEdit={canEdit} />
       : <CardGrid>{images.map((i) => <ImageGalleryCard key={i.id} img={i} href={`/admin/images/${i.id}`} />)}</CardGrid>;
 
   } else {
@@ -427,18 +429,20 @@ export default function PopupLayer({
             {title}
           </h2>
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-            <Link
-              href={newHref}
-              style={{
-                fontFamily: "var(--font-heading)", fontSize: "0.95rem",
-                color: "var(--color-gold)", letterSpacing: "0.06em",
-                textDecoration: "none",
-                padding: "0.35rem 0.85rem",
-                border: "1px solid var(--color-gold-dim)", borderRadius: "3px",
-              }}
-            >
-              + New
-            </Link>
+            {canEdit && newHref && (
+              <Link
+                href={newHref}
+                style={{
+                  fontFamily: "var(--font-heading)", fontSize: "0.95rem",
+                  color: "var(--color-gold)", letterSpacing: "0.06em",
+                  textDecoration: "none",
+                  padding: "0.35rem 0.85rem",
+                  border: "1px solid var(--color-gold-dim)", borderRadius: "3px",
+                }}
+              >
+                + New
+              </Link>
+            )}
             <button
               onClick={close}
               aria-label="Close popup"
@@ -460,15 +464,17 @@ export default function PopupLayer({
   );
 }
 
-function EmptyState({ title, newHref }: { title: string; newHref: string }) {
+function EmptyState({ title, newHref, canEdit = true }: { title: string; newHref: string; canEdit?: boolean }) {
   return (
     <div style={{ textAlign: "center", padding: "3rem 1rem" }}>
-      <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.25rem" }}>
+      <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: canEdit && newHref ? "1.25rem" : 0 }}>
         No {title.toLowerCase()} yet.
       </p>
-      <Link href={newHref} style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem", color: "var(--color-gold)", letterSpacing: "0.06em", textDecoration: "none" }}>
-        Create the first one →
-      </Link>
+      {canEdit && newHref && (
+        <Link href={newHref} style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem", color: "var(--color-gold)", letterSpacing: "0.06em", textDecoration: "none" }}>
+          Create the first one →
+        </Link>
+      )}
     </div>
   );
 }

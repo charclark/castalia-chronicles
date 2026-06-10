@@ -31,7 +31,6 @@ export async function grantUniverseAccess(
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return { error: "User not found." };
-  if (user.isSuperAdmin) return { error: "Super-admin always has access." };
 
   await prisma.universeAccess.upsert({
     where: { universeId_userId: { universeId, userId } },

@@ -30,7 +30,6 @@ export async function GET(req: NextRequest) {
 
   const hasAccess =
     universe.createdByUserId === session.userId ||
-    (universe.createdByUserId === null && session.isSuperAdmin) ||
     universe.accesses.length > 0;
   if (!hasAccess) return new NextResponse("Forbidden", { status: 403 });
 

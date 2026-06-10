@@ -28,6 +28,7 @@ export default function EntryEditor({
   saveAction,
   deleteAction,
   typeName,
+  readOnly = false,
 }: {
   id?: string;           // undefined = new entry
   title?: string;
@@ -36,6 +37,7 @@ export default function EntryEditor({
   saveAction: SaveAction;
   deleteAction?: DeleteAction;
   typeName: string;      // e.g. "Idea", "Note"
+  readOnly?: boolean;
 }) {
   const [formKey, setFormKey] = useState(0);
   const [state, action, savePending] = useActionState(saveAction, null);
@@ -203,53 +205,55 @@ export default function EntryEditor({
         </div>
 
         {/* Actions */}
-        <div
-          style={{
-            display: "flex",
-            gap: "0.75rem",
-            alignItems: "center",
-            paddingTop: "0.5rem",
-          }}
-        >
-          <button
-            type="submit"
-            disabled={savePending}
+        {!readOnly && (
+          <div
             style={{
-              background: savePending ? "var(--color-border)" : "var(--color-crimson)",
-              border: "none",
-              borderRadius: "3px",
-              padding: "0.65rem 1.4rem",
-              color: "var(--color-ink)",
-              fontFamily: "var(--font-heading)",
-              fontSize: "1rem",
-              letterSpacing: "0.08em",
-              cursor: savePending ? "default" : "pointer",
+              display: "flex",
+              gap: "0.75rem",
+              alignItems: "center",
+              paddingTop: "0.5rem",
             }}
           >
-            {savePending ? "Saving…" : isNew ? `Create ${typeName}` : "Save Changes"}
-          </button>
-
-          {!isNew && deleteAction && (
             <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deletePending}
+              type="submit"
+              disabled={savePending}
               style={{
-                background: "transparent",
-                border: "1px solid var(--color-crimson-dim)",
+                background: savePending ? "var(--color-border)" : "var(--color-crimson)",
+                border: "none",
                 borderRadius: "3px",
-                padding: "0.6rem 1.1rem",
-                color: "#d4848e",
-                fontFamily: "var(--font-body)",
-                fontSize: "0.88rem",
-                cursor: deletePending ? "default" : "pointer",
-                marginLeft: "auto",
+                padding: "0.65rem 1.4rem",
+                color: "var(--color-ink)",
+                fontFamily: "var(--font-heading)",
+                fontSize: "1rem",
+                letterSpacing: "0.08em",
+                cursor: savePending ? "default" : "pointer",
               }}
             >
-              {deletePending ? "Deleting…" : `Delete ${typeName}`}
+              {savePending ? "Saving…" : isNew ? `Create ${typeName}` : "Save Changes"}
             </button>
-          )}
-        </div>
+
+            {!isNew && deleteAction && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deletePending}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--color-crimson-dim)",
+                  borderRadius: "3px",
+                  padding: "0.6rem 1.1rem",
+                  color: "#d4848e",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.88rem",
+                  cursor: deletePending ? "default" : "pointer",
+                  marginLeft: "auto",
+                }}
+              >
+                {deletePending ? "Deleting…" : `Delete ${typeName}`}
+              </button>
+            )}
+          </div>
+        )}
       </form>
     </div>
   );

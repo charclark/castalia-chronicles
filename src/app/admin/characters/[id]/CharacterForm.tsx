@@ -404,6 +404,7 @@ export default function CharacterForm({
   currentRoles = [],
   customRoles = [],
   isSuperAdmin = false,
+  canEdit = true,
   universeId = "",
 }: {
   character?: CharacterData;
@@ -413,6 +414,7 @@ export default function CharacterForm({
   currentRoles?: string[];
   customRoles?: { id: string; name: string }[];
   isSuperAdmin?: boolean;
+  canEdit?: boolean;
   universeId?: string;
 }) {
   const router = useRouter();
@@ -840,45 +842,47 @@ export default function CharacterForm({
         </section>
 
         {/* ── Save / Delete ── */}
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", paddingBottom: "0.5rem" }}>
-          <button
-            type="submit"
-            disabled={savePending}
-            style={{
-              background: savePending ? "var(--color-border)" : "var(--color-crimson)",
-              border: "none", borderRadius: "3px",
-              padding: "0.7rem 1.5rem",
-              color: "var(--color-ink)",
-              fontFamily: "var(--font-heading)",
-              fontSize: "1rem",
-              letterSpacing: "0.08em",
-              cursor: savePending ? "default" : "pointer",
-            }}
-          >
-            {savePending ? "Saving…" : isNew ? "Create Character" : "Save Changes"}
-          </button>
-
-          {!isNew && (
+        {canEdit && (
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", paddingBottom: "0.5rem" }}>
             <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deletePending}
+              type="submit"
+              disabled={savePending}
               style={{
-                background: "transparent",
-                border: "1px solid var(--color-crimson-dim)",
-                borderRadius: "3px",
-                padding: "0.65rem 1.1rem",
-                color: "#d4848e",
-                fontFamily: "var(--font-body)",
-                fontSize: "0.88rem",
-                cursor: deletePending ? "default" : "pointer",
-                marginLeft: "auto",
+                background: savePending ? "var(--color-border)" : "var(--color-crimson)",
+                border: "none", borderRadius: "3px",
+                padding: "0.7rem 1.5rem",
+                color: "var(--color-ink)",
+                fontFamily: "var(--font-heading)",
+                fontSize: "1rem",
+                letterSpacing: "0.08em",
+                cursor: savePending ? "default" : "pointer",
               }}
             >
-              {deletePending ? "Deleting…" : "Delete Character"}
+              {savePending ? "Saving…" : isNew ? "Create Character" : "Save Changes"}
             </button>
-          )}
-        </div>
+
+            {!isNew && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deletePending}
+                style={{
+                  background: "transparent",
+                  border: "1px solid var(--color-crimson-dim)",
+                  borderRadius: "3px",
+                  padding: "0.65rem 1.1rem",
+                  color: "#d4848e",
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.88rem",
+                  cursor: deletePending ? "default" : "pointer",
+                  marginLeft: "auto",
+                }}
+              >
+                {deletePending ? "Deleting…" : "Delete Character"}
+              </button>
+            )}
+          </div>
+        )}
       </form>
 
       {/* ── Relationships (only for existing characters) ── */}

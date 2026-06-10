@@ -17,14 +17,21 @@ export async function requireSuperAdmin(): Promise<SessionPayload> {
   return session;
 }
 
-// Returns the current user's effective permission for a universe,
-// or null if they have no access. Super-admin always returns "super".
+// Returns the current user's effective permission for a universe.
+// Ownership (createdByUserId) always grants "edit".
+// Falls back to explicit UniverseAccess record.
+// Returns null if the user has no access at all.
 export async function getUniversePermission(
   universeId: string,
   userId: string,
-  isSuperAdmin: boolean
-): Promise<"super" | "edit" | "view" | null> {
-  if (isSuperAdmin) return "super";
+  _isSuperAdmin?: boolean
+): Promise<"edit" | "view" | null> {
+  const universe = await prisma.universe.findUnique({
+    where: { id: universeId },
+    select: { createdByUserId: true },
+  });
+  if (universe?.createdByUserId === userId) return "edit";
+
   const access = await prisma.universeAccess.findUnique({
     where: { universeId_userId: { universeId, userId } },
   });
@@ -33,34 +40,54 @@ export async function getUniversePermission(
 }
 
 // Use in write server actions — ensures the current user has edit access to the
-// active universe. Throws a descriptive error if not.
+// active universe. Accepts universe owners (createdByUserId) and users with an
+// explicit "edit" UniverseAccess record. Throws a descriptive error if not.
 export async function requireUniverseEdit(): Promise<{
   session: SessionPayload;
   universeId: string;
 }> {
   const session = await requireAuth();
   const universeId = await getCurrentUniverseId();
-  if (!session.isSuperAdmin) {
-    const access = await prisma.universeAccess.findUnique({
-      where: { universeId_userId: { universeId, userId: session.userId } },
-    });
-    if (!access) throw new Error("You do not have access to this universe.");
-    if (access.permission !== "edit")
-      throw new Error("You have view-only access to this universe.");
+
+  const universe = await prisma.universe.findUnique({
+    where: { id: universeId },
+    select: { createdByUserId: true },
+  });
+  if (!universe) throw new Error("Universe not found.");
+
+  // Owners always have edit access.
+  if (universe.createdByUserId === session.userId) {
+    return { session, universeId };
   }
+
+  // Check explicit access record.
+  const access = await prisma.universeAccess.findUnique({
+    where: { universeId_userId: { universeId, userId: session.userId } },
+  });
+  if (!access) throw new Error("You do not have access to this universe.");
+  if (access.permission !== "edit")
+    throw new Error("You have view-only access to this universe.");
+
   return { session, universeId };
 }
 
-// Returns all universes the current user can see.
-// Everyone (including superadmin) sees only universes they created or were shared on.
-// Superadmin additionally sees legacy universes with no recorded creator.
+// Returns true if the current session user has edit access to the given
+// universe (owner or explicit edit grant). Safe to call from page components.
+export async function getCanEditUniverse(universeId: string): Promise<boolean> {
+  const session = await getSession();
+  if (!session) return false;
+  const perm = await getUniversePermission(universeId, session.userId);
+  return perm === "edit";
+}
+
+// Returns all universes the current user can see (owns or has been shared on).
+// Everyone follows the same visibility rules — no superadmin exceptions.
 export async function getAccessibleUniverses(session: SessionPayload) {
   return prisma.universe.findMany({
     where: {
       archivedAt: null,
       OR: [
         { createdByUserId: session.userId },
-        ...(session.isSuperAdmin ? [{ createdByUserId: null }] : []),
         { accesses: { some: { userId: session.userId } } },
       ],
     },

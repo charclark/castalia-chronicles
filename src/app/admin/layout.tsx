@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import AdminNav from "@/components/AdminNav";
 import SidebarClient from "@/components/SidebarClient";
 import PopupLayer from "@/components/PopupLayer";
@@ -26,14 +27,12 @@ export default async function AdminLayout({
   if (userRecord.forcePasswordChange) redirect("/force-change-password");
 
   // Universe selector — archived universes never appear in the sidebar/selector.
-  // Everyone (including superadmin) sees only universes they created or were shared with.
-  // Superadmin also sees legacy universes with no owner (createdByUserId = null).
+  // Everyone sees only universes they created or were explicitly shared on.
   const universes = await prisma.universe.findMany({
     where: {
       archivedAt: null,
       OR: [
         { createdByUserId: session.userId },
-        ...(session.isSuperAdmin ? [{ createdByUserId: null }] : []),
         { accesses: { some: { userId: session.userId } } },
       ],
     },
@@ -47,6 +46,11 @@ export default async function AdminLayout({
     cookieId && universes.some((u) => u.id === cookieId)
       ? cookieId
       : (universes[0]?.id ?? null);
+
+  // Determine edit access for the current universe (used by PopupLayer + sidebar)
+  const canEdit = currentUniverseId
+    ? await getCanEditUniverse(currentUniverseId)
+    : false;
 
   // Sidebar data — scoped to current universe
   const [ideas, notes, plotItems, characters, locations, images] = currentUniverseId
@@ -135,6 +139,7 @@ export default async function AdminLayout({
           locations={locations}
           images={images}
           universeId={currentUniverseId}
+          canEdit={canEdit}
         />
       </Suspense>
     </div>

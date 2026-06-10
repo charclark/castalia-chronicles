@@ -15,7 +15,6 @@ export async function GET(_req: NextRequest) {
       archivedAt: null,
       OR: [
         { createdByUserId: session.userId },
-        ...(session.isSuperAdmin ? [{ createdByUserId: null }] : []),
         { accesses: { some: { userId: session.userId } } },
       ],
     },

@@ -9,14 +9,12 @@ export default async function UniversesPage() {
   if (!session) return null;
   const isSuperAdmin = session.isSuperAdmin;
 
-  // Active universes — everyone sees only what they own/are shared on.
-  // Superadmin also picks up legacy universes with no recorded creator.
+  // Active universes — everyone sees only what they own or are shared on.
   const universes = await prisma.universe.findMany({
     where: {
       archivedAt: null,
       OR: [
         { createdByUserId: session.userId },
-        ...(isSuperAdmin ? [{ createdByUserId: null }] : []),
         { accesses: { some: { userId: session.userId } } },
       ],
     },

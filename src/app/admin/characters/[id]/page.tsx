@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import CharacterForm from "./CharacterForm";
 
 export default async function CharacterPage({
@@ -48,6 +49,8 @@ export default async function CharacterPage({
 
   if (!character) notFound();
 
+  const canEdit = await getCanEditUniverse(universeId);
+
   return (
     <CharacterForm
       character={character}
@@ -57,6 +60,7 @@ export default async function CharacterPage({
       currentRoles={character.roles.map((r) => r.role)}
       customRoles={customRoleRows}
       isSuperAdmin={session?.isSuperAdmin ?? false}
+      canEdit={canEdit}
       universeId={universeId}
     />
   );

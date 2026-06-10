@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import LocationForm from "./LocationForm";
 
 export default async function LocationPage({
@@ -14,8 +15,11 @@ export default async function LocationPage({
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) notFound();
 
-  const location = await prisma.location.findFirst({ where: { id, universeId } });
+  const [location, canEdit] = await Promise.all([
+    prisma.location.findFirst({ where: { id, universeId } }),
+    getCanEditUniverse(universeId),
+  ]);
   if (!location) notFound();
 
-  return <LocationForm location={location} />;
+  return <LocationForm location={location} canEdit={canEdit} />;
 }

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getCanEditUniverse } from "@/lib/auth-utils";
 import EntryEditor from "@/components/EntryEditor";
 import { updateStorylineIdea, deleteStorylineIdea } from "@/app/actions/storyline-ideas";
 
@@ -15,9 +16,10 @@ export default async function StorylineIdeaPage({
   const universeId = cookieStore.get("selected-universe")?.value;
   if (!universeId) notFound();
 
-  const idea = await prisma.storylineIdea.findFirst({
-    where: { id, universeId },
-  });
+  const [idea, canEdit] = await Promise.all([
+    prisma.storylineIdea.findFirst({ where: { id, universeId } }),
+    getCanEditUniverse(universeId),
+  ]);
   if (!idea) notFound();
 
   return (
@@ -29,6 +31,7 @@ export default async function StorylineIdeaPage({
       saveAction={updateStorylineIdea}
       deleteAction={deleteStorylineIdea}
       typeName="Idea"
+      readOnly={!canEdit}
     />
   );
 }

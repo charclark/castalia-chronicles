@@ -31,7 +31,7 @@ const inputStyle: React.CSSProperties = {
   fontFamily: "var(--font-body)", fontSize: "0.95rem", outline: "none", width: "100%",
 };
 
-export default function ImageDetail({ image }: { image: ImageMeta }) {
+export default function ImageDetail({ image, canEdit = true }: { image: ImageMeta; canEdit?: boolean }) {
   const router = useRouter();
   const [state, action, savePending] = useActionState(updateImage, null);
   const [deletePending, startDelete] = useTransition();
@@ -130,37 +130,39 @@ export default function ImageDetail({ image }: { image: ImageMeta }) {
           </select>
         </div>
 
-        <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-          <button
-            type="submit"
-            disabled={savePending}
-            style={{
-              background: savePending ? "var(--color-border)" : "var(--color-crimson)",
-              border: "none", borderRadius: "3px",
-              padding: "0.7rem 1.5rem", color: "var(--color-ink)",
-              fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.08em",
-              cursor: savePending ? "default" : "pointer",
-            }}
-          >
-            {savePending ? "Saving…" : "Save Changes"}
-          </button>
+        {canEdit && (
+          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+            <button
+              type="submit"
+              disabled={savePending}
+              style={{
+                background: savePending ? "var(--color-border)" : "var(--color-crimson)",
+                border: "none", borderRadius: "3px",
+                padding: "0.7rem 1.5rem", color: "var(--color-ink)",
+                fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.08em",
+                cursor: savePending ? "default" : "pointer",
+              }}
+            >
+              {savePending ? "Saving…" : "Save Changes"}
+            </button>
 
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deletePending}
-            style={{
-              background: "transparent",
-              border: "1px solid var(--color-crimson-dim)",
-              borderRadius: "3px", padding: "0.65rem 1.1rem",
-              color: "#d4848e", fontFamily: "var(--font-body)", fontSize: "0.88rem",
-              cursor: deletePending ? "default" : "pointer",
-              marginLeft: "auto",
-            }}
-          >
-            {deletePending ? "Deleting…" : "Delete Image"}
-          </button>
-        </div>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deletePending}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--color-crimson-dim)",
+                borderRadius: "3px", padding: "0.65rem 1.1rem",
+                color: "#d4848e", fontFamily: "var(--font-body)", fontSize: "0.88rem",
+                cursor: deletePending ? "default" : "pointer",
+                marginLeft: "auto",
+              }}
+            >
+              {deletePending ? "Deleting…" : "Delete Image"}
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );
