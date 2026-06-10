@@ -706,16 +706,6 @@ export default function WorkDetail({
 
       <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
 
-      {/* ── Publishing section ── */}
-      {canEdit && (
-        <>
-          <div style={{ marginBottom: "2rem" }}>
-            <PublishingSection work={work} />
-          </div>
-          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-        </>
-      )}
-
       {canEdit && (
         <>
           {/* ── Rename form ── */}
@@ -754,6 +744,12 @@ export default function WorkDetail({
               {renamePending ? "Saving…" : "Save Title"}
             </button>
           </form>
+
+          {/* ── Publishing section ── */}
+          <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
+          <div style={{ marginBottom: "2rem" }}>
+            <PublishingSection work={work} />
+          </div>
 
           {/* ── Cover image selector (books only) ── */}
           {isBook && (
