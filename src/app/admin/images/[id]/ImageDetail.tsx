@@ -101,6 +101,7 @@ export default function ImageDetail({ image, canEdit = true }: { image: ImageMet
       {/* Edit form */}
       <form action={action} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         <input type="hidden" name="id" value={image.id} />
+        <fieldset disabled={!canEdit} style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}>
 
         <div style={fieldRow}>
           <label htmlFor="label" style={labelStyle}>Label / Caption *</label>
@@ -129,6 +130,8 @@ export default function ImageDetail({ image, canEdit = true }: { image: ImageMet
             ))}
           </select>
         </div>
+
+        </fieldset>
 
         {canEdit && (
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>

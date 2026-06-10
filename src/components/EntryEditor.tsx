@@ -147,6 +147,7 @@ export default function EntryEditor({
 
       <form key={formKey} action={action} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
         {id && <input type="hidden" name="id" value={id} />}
+        <fieldset disabled={readOnly} style={{ border: "none", margin: 0, padding: 0, minWidth: 0 }}>
 
         {/* Title */}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
@@ -203,6 +204,8 @@ export default function EntryEditor({
             placeholder="Write freely…"
           />
         </div>
+
+        </fieldset>
 
         {/* Actions */}
         {!readOnly && (
