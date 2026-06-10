@@ -664,43 +664,53 @@ export default function WorkDetail({
             </span>
           </Link>
 
-          {/* Backup — superadmin only */}
-          {isSuperAdmin && <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+          {/* Download — visible to all users with access */}
+          <a
+            href={`/api/admin/backup/work/${work.id}?format=docx`}
+            download
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
+              background: "transparent",
+              border: "1px solid var(--color-border)",
+              borderRadius: "4px", padding: "0.85rem 1.25rem",
+              textDecoration: "none", minWidth: "160px",
+              transition: "border-color 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-border-light)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
+          >
+            <span style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em", color: "var(--color-ink-muted)" }}>
+              ↓ Download
+            </span>
+            <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+              Word document (.docx)
+            </span>
+          </a>
+
+          {/* JSON backup — superadmin only */}
+          {isSuperAdmin && (
             <a
               href={`/api/admin/backup/work/${work.id}?format=json`}
               download
               style={{
-                fontFamily: "var(--font-body)", fontSize: "0.82rem",
-                color: "var(--color-ink-muted)",
+                display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.15rem",
                 background: "transparent",
                 border: "1px solid var(--color-border)",
-                borderRadius: "3px", padding: "0.35rem 0.8rem",
-                textDecoration: "none", whiteSpace: "nowrap",
-                transition: "border-color 0.15s, color 0.15s",
+                borderRadius: "4px", padding: "0.85rem 1.25rem",
+                textDecoration: "none", minWidth: "160px",
+                transition: "border-color 0.15s",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-border-light)"; e.currentTarget.style.color = "var(--color-ink)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--color-border-light)")}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--color-border)")}
             >
-              ↓ JSON backup
+              <span style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em", color: "var(--color-ink-muted)" }}>
+                ↓ JSON backup
+              </span>
+              <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+                Full data backup
+              </span>
             </a>
-            <a
-              href={`/api/admin/backup/work/${work.id}?format=docx`}
-              download
-              style={{
-                fontFamily: "var(--font-body)", fontSize: "0.82rem",
-                color: "var(--color-ink-muted)",
-                background: "transparent",
-                border: "1px solid var(--color-border)",
-                borderRadius: "3px", padding: "0.35rem 0.8rem",
-                textDecoration: "none", whiteSpace: "nowrap",
-                transition: "border-color 0.15s, color 0.15s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--color-border-light)"; e.currentTarget.style.color = "var(--color-ink)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.color = "var(--color-ink-muted)"; }}
-            >
-              ↓ Word (.docx)
-            </a>
-          </div>}
+          )}
         </div>
       </div>
 

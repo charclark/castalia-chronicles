@@ -215,7 +215,7 @@ export default async function AdminDashboard({
 
   return (
     <div>
-      <style>{`.admin-write-btn:hover, .admin-add-btn:hover { border-color: var(--color-gold) !important; } .admin-share-btn:hover { border-color: var(--color-crimson) !important; }`}</style>
+      <style>{`.admin-write-btn:hover, .admin-add-btn:hover { border-color: var(--color-gold) !important; } .admin-share-btn:hover { border-color: var(--color-crimson) !important; } .admin-download-btn:hover { border-color: var(--color-border-light) !important; color: var(--color-ink) !important; }`}</style>
       <h2
         style={{
           fontFamily: "var(--font-heading)",
@@ -301,6 +301,25 @@ export default async function AdminDashboard({
                   Share
                 </Link>
               )}
+              <a
+                href="/api/admin/backup/universe?format=docx"
+                download
+                className="admin-download-btn"
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontSize: "0.75rem",
+                  color: "var(--color-ink-muted)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "3px",
+                  padding: "0.25rem 0.6rem",
+                  background: "transparent",
+                  textDecoration: "none",
+                  letterSpacing: "0.04em",
+                  transition: "border-color 0.15s, color 0.15s",
+                }}
+              >
+                ↓ Download
+              </a>
               <Link
                 href="/admin/works"
                 style={{
