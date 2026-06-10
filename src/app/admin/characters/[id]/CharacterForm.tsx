@@ -430,10 +430,8 @@ export default function CharacterForm({
   const [deletePending, startDelete] = useTransition();
 
   useEffect(() => {
-    if (isNew && state?.success) {
-      setFormKey((k) => k + 1);
-      setSelectedRoles([]);
-      router.refresh();
+    if (isNew && state?.success && state.id) {
+      router.push(`/admin/characters/${state.id}`);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);

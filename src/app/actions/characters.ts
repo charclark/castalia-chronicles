@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireUniverseEdit } from "@/lib/auth-utils";
 
-export type CharacterState = { error?: string; success?: string } | null;
+export type CharacterState = { error?: string; success?: string; id?: string } | null;
 
 // ── CRUD ────────────────────────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export async function createCharacter(
 
   const roles = formData.getAll("roles") as string[];
 
-  await prisma.character.create({
+  const newChar = await prisma.character.create({
     data: {
       universeId,
       name,
@@ -47,7 +47,7 @@ export async function createCharacter(
   });
 
   revalidatePath("/admin", "layout");
-  return { success: "Character created." };
+  return { success: "Character created.", id: newChar.id };
 }
 
 export async function updateCharacter(
