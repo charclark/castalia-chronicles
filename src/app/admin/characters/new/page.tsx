@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCanEditUniverse } from "@/lib/auth-utils";
+import { getCurrentUniverseId } from "@/lib/universe";
 import CharacterForm from "../[id]/CharacterForm";
 
 export default async function NewCharacterPage() {
-  const cookieStore = await cookies();
-  const universeId = cookieStore.get("selected-universe")?.value;
-  if (!universeId) notFound();
+  const universeId = await getCurrentUniverseId().catch(() => null);
+  if (!universeId) redirect("/admin");
 
   const canEdit = await getCanEditUniverse(universeId);
   if (!canEdit) redirect("/admin");
