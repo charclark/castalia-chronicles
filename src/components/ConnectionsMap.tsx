@@ -110,21 +110,37 @@ const NODE_R = 7;
 // ── Relationship styling ─────────────────────────────────────────────────────
 
 const REL_COLOR: Record<string, string> = {
-  relative: "#9e8a6c",
-  friend:   "#5a8a6e",
-  enemy:    "#8b2635",
+  friend:          "#2ea860",
+  relative:        "#c09030",
+  enemy:           "#c82840",
+  partner:         "#cc4488",
+  "love interest": "#9930cc",
+  married:         "#4448cc",
+  coworker:        "#2890cc",
+  rival:           "#d05820",
+  ally:            "#18a8a0",
+  mentor:          "#88aa20",
 };
 const REL_LABEL: Record<string, string> = {
-  relative: "Family",
-  friend:   "Friend",
-  enemy:    "Enemy",
+  friend:          "Friend",
+  relative:        "Family",
+  enemy:           "Enemy",
+  partner:         "Partner",
+  "love interest": "Love Interest",
+  married:         "Married",
+  coworker:        "Coworker",
+  rival:           "Rival",
+  ally:            "Ally",
+  mentor:          "Mentor",
 };
 const REL_DASH: Record<string, string> = {
-  relative: "6 3",
-  friend:   "none",
-  enemy:    "3 3",
+  relative:        "8 4",
+  enemy:           "3 3",
+  rival:           "5 3",
+  "love interest": "2 4",
+  mentor:          "6 2 1 2",
 };
-const CUSTOM_COLOR = "#6a7a9e";
+const CUSTOM_COLOR = "#7a7a9a";
 
 // ── Force simulation ──────────────────────────────────────────────────────────
 
