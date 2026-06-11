@@ -625,8 +625,7 @@ export default function CharacterForm({
   const [speciesError, setSpeciesError] = useState("");
   const [speciesPending, startSpeciesTransition] = useTransition();
 
-  function handleAddSpecies(e: React.FormEvent) {
-    e.preventDefault();
+  function handleAddSpecies() {
     setSpeciesError("");
     startSpeciesTransition(async () => {
       const r = await createSpecies(universeId, newSpeciesName.trim(), newSpeciesColor, newSpeciesShape);
@@ -654,8 +653,7 @@ export default function CharacterForm({
     );
   }
 
-  function handleAddCustomRole(e: React.FormEvent) {
-    e.preventDefault();
+  function handleAddCustomRole() {
     setRoleError("");
     startRoleTransition(async () => {
       const r = await createCustomRole(universeId, newRoleName.trim());
@@ -775,7 +773,7 @@ export default function CharacterForm({
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", marginBottom: "0.85rem", fontStyle: "italic" }}>
             Add a custom species for this universe. It will appear in the Character Type dropdown and on the Connections Map.
           </p>
-          <form onSubmit={handleAddSpecies} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
             <div style={grid2}>
               <div style={fieldRow}>
                 <label htmlFor="newSpeciesName" style={labelStyle}>Species Name</label>
@@ -784,6 +782,7 @@ export default function CharacterForm({
                   type="text"
                   value={newSpeciesName}
                   onChange={(e) => setNewSpeciesName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddSpecies(); } }}
                   placeholder="e.g. Zombie, Fae, Demon…"
                   maxLength={60}
                   style={inputStyle}
@@ -817,7 +816,8 @@ export default function CharacterForm({
                 <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "#d4848e", margin: 0 }}>{speciesError}</p>
               )}
               <button
-                type="submit"
+                type="button"
+                onClick={handleAddSpecies}
                 disabled={speciesPending || !newSpeciesName.trim()}
                 style={{
                   fontFamily: "var(--font-heading)",
@@ -855,7 +855,7 @@ export default function CharacterForm({
                 ))}
               </div>
             )}
-          </form>
+          </div>
         </section>}
 
         {/* ── Roles ── */}
@@ -913,19 +913,20 @@ export default function CharacterForm({
                   </span>
                 ))}
               </div>
-              <form onSubmit={handleAddCustomRole} style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <input
                   value={newRoleName}
                   onChange={(e) => setNewRoleName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddCustomRole(); } }}
                   placeholder="New role name…"
                   maxLength={60}
                   style={{ ...inputStyle, flex: 1, fontSize: "0.85rem", padding: "0.35rem 0.6rem" }}
                 />
-                <button type="submit" disabled={rolePending || !newRoleName.trim()}
+                <button type="button" onClick={handleAddCustomRole} disabled={rolePending || !newRoleName.trim()}
                   style={{ background: !newRoleName.trim() ? "var(--color-border)" : "var(--color-crimson)", border: "none", borderRadius: "3px", padding: "0.35rem 0.8rem", color: "var(--color-ink)", fontFamily: "var(--font-body)", fontSize: "0.82rem", cursor: !newRoleName.trim() ? "default" : "pointer", whiteSpace: "nowrap" }}>
                   {rolePending ? "…" : "Add"}
                 </button>
-              </form>
+              </div>
               {roleError && <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "#d4848e", marginTop: "0.4rem" }}>{roleError}</p>}
             </div>
           )}
