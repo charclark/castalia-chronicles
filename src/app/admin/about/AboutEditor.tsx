@@ -165,7 +165,7 @@ export default function AboutEditor({
           marginBottom: "0.3rem",
         }}
       >
-        About Page Editor
+        The Lore Editor
       </h2>
       <p
         style={{

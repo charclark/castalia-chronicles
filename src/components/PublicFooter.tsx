@@ -74,7 +74,8 @@ export default function PublicFooter() {
           >
             {[
               { href: "/", label: "Home" },
-              { href: "/about", label: "About" },
+              { href: "/about", label: "The Lore" },
+              { href: "/our-authors", label: "Our Authors" },
               { href: "/free-read", label: "Free Read" },
               { href: "/books", label: "Books" },
             ].map(({ href, label }) => (

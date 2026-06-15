@@ -28,6 +28,7 @@ model User {
   archivedUniverses Universe[]       @relation("UniverseArchiver")
   workShares        WorkShare[]
   feedbackShares    FeedbackShare[]
+  authorProfile     AuthorProfile?
 }
 
 // --- Universe ---
@@ -274,6 +275,25 @@ model SiteSettings {
   bio       String?
   photoData Bytes?
   updatedAt DateTime @updatedAt
+}
+
+// --- Author Profiles ---
+// One per user. status: "pending" | "approved" | "rejected".
+// Approved profiles appear on the public Our Authors page.
+model AuthorProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eyebrowText String?
+  headline    String?
+  bodyText    String?
+  photoData   Bytes?
+  status      String    @default("pending")
+  submittedAt DateTime  @default(now())
+  approvedAt  DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
 }
 
 // --- Feedback Messages ---

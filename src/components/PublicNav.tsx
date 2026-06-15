@@ -7,7 +7,8 @@ import MailingListWidget from "./MailingListWidget";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
-  { href: "/about", label: "About", exact: false },
+  { href: "/about", label: "The Lore", exact: false },
+  { href: "/our-authors", label: "Our Authors", exact: false },
   { href: "/free-read", label: "Free Read", exact: false },
   { href: "/books", label: "Published Books", exact: false },
 ] as const;
