@@ -116,6 +116,7 @@ export default function HomePage() {
       >
         <a href="/free-read" className="pub-cta-primary">Read for Free</a>
         <a href="/books" className="pub-cta-secondary">Published Books</a>
+        <a href="/write-with-us" className="pub-cta-secondary">Write With Us</a>
       </div>
     </main>
   );

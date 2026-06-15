@@ -296,6 +296,38 @@ model AuthorProfile {
   @@index([status])
 }
 
+// --- Join Requests ---
+// Submitted by prospective authors via the /write-with-us page.
+// All boolean fields capture explicit checkbox confirmations from the applicant.
+// termsVersion records which version of the Terms they agreed to (e.g. "June 2026").
+// ipAddress is captured at submission time for legal record-keeping.
+// status: "pending" | "approved" | "rejected"
+model JoinRequest {
+  id                     String    @id @default(cuid())
+  fullName               String
+  email                  String
+  requestedUsername      String
+  genres                 String    // comma-separated list
+  aboutYou               String
+  existingWorkLink       String?
+  howDidYouHear          String?
+  confirmedAge           Boolean
+  confirmedOriginalAuthor Boolean
+  confirmedPlagiarism    Boolean
+  confirmedApproval      Boolean
+  confirmedPersonalUse   Boolean
+  confirmedRightToRefuse Boolean
+  confirmedTerms         Boolean
+  termsVersion           String
+  ipAddress              String
+  submittedAt            DateTime  @default(now())
+  status                 String    @default("pending")
+  reviewedAt             DateTime?
+
+  @@index([status])
+  @@index([submittedAt])
+}
+
 // --- Feedback Messages ---
 // Submitted by public visitors via the Feedback popup.
 // read: false = unread/new; true = admin has handled it.

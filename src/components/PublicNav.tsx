@@ -101,6 +101,14 @@ export default function PublicNav() {
           <MailingListWidget />
           <FeedbackPopup />
 
+          <Link
+            href="/write-with-us"
+            className="pub-cta-primary"
+            style={{ fontSize: "0.88rem", padding: "0.28rem 0.85rem", marginLeft: "0.25rem", whiteSpace: "nowrap" }}
+          >
+            Write With Us
+          </Link>
+
           {/* Subtle admin entry point — small, unobtrusive, far right */}
           <Link
             href="/admin"
