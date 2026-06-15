@@ -14,7 +14,7 @@ const NAV_LINKS = [
   { href: "/admin/feedback", label: "Feedback", superAdminOnly: false },
   { href: "/admin/mailing-list", label: "Mailing List", superAdminOnly: true },
   { href: "/admin/free-read-stats", label: "Read Stats", superAdminOnly: false },
-  { href: "/admin/about", label: "The Lore Editor", superAdminOnly: false },
+  { href: "/admin/about", label: "The Lore Editor", superAdminOnly: true },
   { href: "/admin/author-profile", label: "My Author Profile", superAdminOnly: false },
   { href: "/admin/author-approvals", label: "Author Approvals", superAdminOnly: true },
   { href: "/admin/restore", label: "Restore", superAdminOnly: true },
