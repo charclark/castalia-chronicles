@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import MailingListClient from "./MailingListClient";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 export default async function MailingListPage() {
   const session = await getSession();
   const isSuperAdmin = session?.isSuperAdmin ?? false;
+  if (!isSuperAdmin) redirect("/admin");
 
   const entries = await prisma.mailingListEntry.findMany({
     orderBy: { createdAt: "desc" },

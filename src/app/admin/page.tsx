@@ -13,6 +13,7 @@ export default async function AdminDashboard({
   searchParams: Promise<{ view?: string }>;
 }) {
   const session = await getSession();
+  const isSuperAdmin = session?.isSuperAdmin ?? false;
   const { view } = await searchParams;
 
   const universes = await prisma.universe.findMany({
@@ -175,8 +176,8 @@ export default async function AdminDashboard({
             select: { id: true, name: true, locatedIn: true },
           }),
           prisma.work.count({ where: { universeId: currentUniverse.id } }),
-          prisma.feedbackMessage.count({ where: { read: false } }),
-          prisma.mailingListEntry.count(),
+          isSuperAdmin ? prisma.feedbackMessage.count({ where: { read: false } }) : Promise.resolve(0),
+          isSuperAdmin ? prisma.mailingListEntry.count() : Promise.resolve(0),
         ])
       : [0, 0, [], [], 0, 0, 0];
 
@@ -435,22 +436,26 @@ export default async function AdminDashboard({
         <Link href="/admin/feedback" style={cardBase} className="admin-card-link">
           <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
             Feedback
-            {(unreadFeedback as number) > 0 && (
+            {isSuperAdmin && (unreadFeedback as number) > 0 && (
               <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-crimson)", border: "1px solid var(--color-crimson-dim)", borderRadius: "2px", padding: "0.1rem 0.4rem", marginLeft: "0.5rem", letterSpacing: "0.08em" }}>
                 {unreadFeedback} unread
               </span>
             )}
           </h3>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>Reader messages</p>
-        </Link>
-
-        {/* Mailing List */}
-        <Link href="/admin/mailing-list" style={cardBase} className="admin-card-link">
-          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Mailing List</h3>
           <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>
-            {(subCount as number) > 0 ? `${subCount} subscriber${(subCount as number) !== 1 ? "s" : ""}` : "Subscribers & export"}
+            {isSuperAdmin ? "Reader messages" : "Feedback shared with you"}
           </p>
         </Link>
+
+        {/* Mailing List — superadmin only */}
+        {isSuperAdmin && (
+          <Link href="/admin/mailing-list" style={cardBase} className="admin-card-link">
+            <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.2rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>Mailing List</h3>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-ink-faint)" }}>
+              {(subCount as number) > 0 ? `${subCount} subscriber${(subCount as number) !== 1 ? "s" : ""}` : "Subscribers & export"}
+            </p>
+          </Link>
+        )}
 
         {/* Read Stats */}
         <Link href="/admin/free-read-stats" style={cardBase} className="admin-card-link">

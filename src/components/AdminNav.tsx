@@ -12,7 +12,7 @@ const NAV_LINKS = [
   { href: "/admin/universes", label: "Universes", superAdminOnly: false },
   { href: "/admin/works", label: "Writing", superAdminOnly: false },
   { href: "/admin/feedback", label: "Feedback", superAdminOnly: false },
-  { href: "/admin/mailing-list", label: "Mailing List", superAdminOnly: false },
+  { href: "/admin/mailing-list", label: "Mailing List", superAdminOnly: true },
   { href: "/admin/free-read-stats", label: "Read Stats", superAdminOnly: false },
   { href: "/admin/about", label: "About Page", superAdminOnly: false },
   { href: "/admin/restore", label: "Restore", superAdminOnly: true },

@@ -1,10 +1,22 @@
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function FreeReadStatsPage() {
+  const session = await getSession();
+  const isSuperAdmin = session?.isSuperAdmin ?? false;
+
+  const where = isSuperAdmin
+    ? { status: "published" as const, publishMode: "whole" as const }
+    : {
+        status: "published" as const,
+        publishMode: "whole" as const,
+        universe: { createdByUserId: session?.userId ?? "" },
+      };
+
   const works = await prisma.work.findMany({
-    where: { status: "published", publishMode: "whole" },
+    where,
     orderBy: { openCount: "desc" },
     select: {
       id: true,
@@ -38,7 +50,9 @@ export default async function FreeReadStatsPage() {
           marginBottom: "2.5rem",
         }}
       >
-        Open counts for publicly available free reads, sorted by most-opened.
+        {isSuperAdmin
+          ? "Open counts for publicly available free reads, sorted by most-opened."
+          : "Open counts for your publicly available free reads, sorted by most-opened."}
       </p>
 
       {works.length === 0 ? (

@@ -27,6 +27,7 @@ model User {
   createdUniverses  Universe[]       @relation("UniverseCreator")
   archivedUniverses Universe[]       @relation("UniverseArchiver")
   workShares        WorkShare[]
+  feedbackShares    FeedbackShare[]
 }
 
 // --- Universe ---
@@ -275,12 +276,26 @@ model SiteSettings {
 // Submitted by public visitors via the Feedback popup.
 // read: false = unread/new; true = admin has handled it.
 model FeedbackMessage {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   name      String
   email     String?
   message   String
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
+  read      Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  shares    FeedbackShare[]
+}
+
+model FeedbackShare {
+  id                String          @id @default(cuid())
+  feedbackMessageId String
+  feedbackMessage   FeedbackMessage @relation(fields: [feedbackMessageId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sharedAt          DateTime        @default(now())
+
+  @@unique([feedbackMessageId, userId])
+  @@index([feedbackMessageId])
+  @@index([userId])
 }
 
 // --- Mailing List ---

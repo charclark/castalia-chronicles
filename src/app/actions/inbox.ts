@@ -7,22 +7,59 @@ import { getSession } from "@/lib/session";
 async function auth() {
   const session = await getSession();
   if (!session) throw new Error("Not authenticated.");
+  return session;
+}
+
+async function requireSuperAdmin() {
+  const session = await auth();
+  if (!session.isSuperAdmin) throw new Error("Not authorized.");
+  return session;
 }
 
 export async function markFeedbackRead(id: string, read: boolean): Promise<void> {
-  await auth();
+  await requireSuperAdmin();
   await prisma.feedbackMessage.update({ where: { id }, data: { read } });
   revalidatePath("/admin/feedback");
 }
 
 export async function deleteFeedbackMessage(id: string): Promise<void> {
-  await auth();
+  await requireSuperAdmin();
   await prisma.feedbackMessage.delete({ where: { id } });
   revalidatePath("/admin/feedback");
 }
 
+export type ShareResult = { error?: string };
+
+export async function shareFeedback(
+  messageId: string,
+  userId: string
+): Promise<ShareResult> {
+  await requireSuperAdmin();
+  try {
+    await prisma.feedbackShare.create({
+      data: { feedbackMessageId: messageId, userId },
+    });
+  } catch {
+    return { error: "Already shared with that user." };
+  }
+  revalidatePath("/admin/feedback");
+  return {};
+}
+
+export async function unshareFeedback(
+  messageId: string,
+  userId: string
+): Promise<ShareResult> {
+  await requireSuperAdmin();
+  await prisma.feedbackShare.deleteMany({
+    where: { feedbackMessageId: messageId, userId },
+  });
+  revalidatePath("/admin/feedback");
+  return {};
+}
+
 export async function deleteMailingListEntry(id: string): Promise<void> {
-  await auth();
+  await requireSuperAdmin();
   await prisma.mailingListEntry.delete({ where: { id } });
   revalidatePath("/admin/mailing-list");
 }
@@ -33,7 +70,7 @@ export async function addMailingListEntry(
   _prev: MailingListState,
   formData: FormData
 ): Promise<MailingListState> {
-  await auth();
+  await requireSuperAdmin();
 
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const name = (formData.get("name") as string)?.trim() || null;
