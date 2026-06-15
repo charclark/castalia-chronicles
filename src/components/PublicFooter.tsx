@@ -110,6 +110,33 @@ export default function PublicFooter() {
             WriteWright
           </p>
         </div>
+
+        {/* Legal links */}
+        <div style={{ marginTop: "1.25rem", display: "flex", gap: "0.1rem", flexWrap: "wrap" }}>
+          {[
+            { href: "/terms", label: "Terms of Service" },
+            { href: "/privacy", label: "Privacy Policy" },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: "0.78rem",
+                color: "var(--color-ink-faint)",
+                padding: "0.2rem 0.65rem",
+                textDecoration: "none",
+                borderRadius: "3px",
+                transition: "color 0.15s",
+                opacity: 0.7,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-ink-muted)"; e.currentTarget.style.opacity = "1"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-ink-faint)"; e.currentTarget.style.opacity = "0.7"; }}
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
       </div>
     </footer>
   );
