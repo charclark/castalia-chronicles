@@ -20,10 +20,10 @@ export default function HomePage() {
         aria-hidden
         style={{
           width: "1px",
-          height: "clamp(50px, 8vh, 90px)",
+          height: "clamp(20px, 3vh, 40px)",
           background:
             "linear-gradient(to bottom, transparent, var(--color-gold-dim), transparent)",
-          marginBottom: "clamp(2rem, 5vh, 3.5rem)",
+          marginBottom: "clamp(0.75rem, 1.5vh, 1.25rem)",
         }}
       />
 
