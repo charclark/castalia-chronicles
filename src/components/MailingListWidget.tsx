@@ -220,6 +220,12 @@ export default function MailingListWidget() {
                     />
                   </div>
 
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-ink-faint)", lineHeight: 1.6, margin: 0 }}>
+                    By signing up, you agree to our{" "}
+                    <a href="/privacy" target="_blank" rel="noopener" style={{ color: "var(--color-ink-faint)", textDecorationColor: "var(--color-border-light)" }}>Privacy Policy</a>.
+                    {" "}We&apos;ll never share your email or send you anything other than WriteWright updates.
+                  </p>
+
                   {error && (
                     <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "#d4848e" }}>
                       {error}
