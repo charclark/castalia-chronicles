@@ -99,7 +99,22 @@ export default function MailingListWidget() {
       <button
         type="button"
         onClick={openPopup}
-        className="pub-cta-primary"
+        style={{
+          fontFamily: "var(--font-body)",
+          fontSize: "0.92rem",
+          letterSpacing: "0.03em",
+          padding: "0.3rem 0.72rem",
+          borderRadius: "3px",
+          color: "var(--color-ink-muted)",
+          background: "transparent",
+          border: "none",
+          textDecoration: "none",
+          whiteSpace: "nowrap",
+          cursor: "pointer",
+          transition: "color 0.15s",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = "var(--color-ink)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = "var(--color-ink-muted)"; }}
       >
         Get Updates!
       </button>

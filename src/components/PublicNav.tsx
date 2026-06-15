@@ -9,8 +9,8 @@ const NAV_LINKS = [
   { href: "/", label: "Home", exact: true },
   { href: "/about", label: "The Lore", exact: false },
   { href: "/our-authors", label: "Our Authors", exact: false },
-  { href: "/free-read", label: "Free Read", exact: false },
-  { href: "/books", label: "Published Books", exact: false },
+  { href: "/free-read", label: "Start Reading", exact: false },
+  { href: "/books", label: "Discover Books", exact: false },
 ] as const;
 
 export default function PublicNav() {
@@ -98,16 +98,16 @@ export default function PublicNav() {
             );
           })}
 
-          <MailingListWidget />
-          <FeedbackPopup />
-
           <Link
             href="/write-with-us"
-            className="pub-cta-primary"
+            className="pub-cta-green"
             style={{ fontSize: "0.88rem", padding: "0.28rem 0.85rem", marginLeft: "0.25rem", whiteSpace: "nowrap" }}
           >
             Write With Us
           </Link>
+
+          <MailingListWidget />
+          <FeedbackPopup />
 
           {/* Subtle admin entry point — small, unobtrusive, far right */}
           <Link

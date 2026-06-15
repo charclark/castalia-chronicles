@@ -70,7 +70,7 @@ export default async function BooksPage() {
               marginBottom: "0.75rem",
             }}
           >
-            Published Books
+            Discover Books
           </p>
           <h1
             style={{

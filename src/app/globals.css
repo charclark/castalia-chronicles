@@ -143,6 +143,26 @@ a:hover { color: var(--color-gold-dim); }
   border-color: var(--color-ink-faint);
 }
 
+.pub-cta-green {
+  font-family: var(--font-heading);
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  letter-spacing: 0.08em;
+  padding: 0.65rem 1.75rem;
+  border-radius: 3px;
+  border: 1px solid rgba(76,139,64,0.45);
+  color: #8bc98d;
+  background: rgba(76,139,64,0.06);
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-block;
+  transition: border-color 0.2s, background 0.2s;
+}
+.pub-cta-green:hover {
+  border-color: #8bc98d;
+  background: rgba(76,139,64,0.12);
+  color: #8bc98d;
+}
+
 /* Hover border helpers — used by server components that can't use onMouseEnter */
 .hover-border-light:hover  { border-color: var(--color-border-light) !important; }
 .hover-border-gold:hover   { border-color: var(--color-gold-dim) !important; }

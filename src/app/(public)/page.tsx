@@ -114,8 +114,8 @@ export default function HomePage() {
           justifyContent: "center",
         }}
       >
-        <a href="/free-read" className="pub-cta-primary">Read for Free</a>
-        <a href="/books" className="pub-cta-secondary">Published Books</a>
+        <a href="/free-read" className="pub-cta-primary">Start Reading</a>
+        <a href="/books" className="pub-cta-secondary">Discover Books</a>
         <a href="/write-with-us" className="pub-cta-secondary">Write With Us</a>
       </div>
     </main>

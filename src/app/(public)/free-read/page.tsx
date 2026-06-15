@@ -62,7 +62,7 @@ export default async function FreeReadPage() {
               marginBottom: "0.75rem",
             }}
           >
-            Free Read
+            Start Reading
           </p>
           <h1
             style={{

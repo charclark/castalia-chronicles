@@ -52,7 +52,7 @@ export default async function ReaderPage({
               textDecoration: "none",
             }}
           >
-            ← Free Read
+            ← Start Reading
           </Link>
         </div>
 
@@ -173,7 +173,7 @@ export default async function ReaderPage({
             textDecoration: "none",
           }}
         >
-          ← Back to Free Read
+          ← Start Reading
         </Link>
       </article>
     </main>
