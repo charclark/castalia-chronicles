@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState, useTransition, useRef } from "react";
-import { updateAboutBio, updateAboutPhoto, removeAboutPhoto } from "@/app/actions/site";
+import { updateAboutContent, updateAboutPhoto, removeAboutPhoto } from "@/app/actions/site";
 
 // ── Compression (same settings as ImageUploader) ──────────────────────────────
 const MAX_PX = 1200;
@@ -50,6 +50,17 @@ const fieldLabel: React.CSSProperties = {
   fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em",
   textTransform: "uppercase", color: "var(--color-ink-muted)",
 };
+const inputStyle: React.CSSProperties = {
+  background: "var(--color-bg-surface)",
+  border: "1px solid var(--color-border)",
+  borderRadius: "3px",
+  padding: "0.6rem 0.8rem",
+  color: "var(--color-ink)",
+  fontFamily: "var(--font-body)",
+  fontSize: "0.95rem",
+  outline: "none",
+  width: "100%",
+};
 const successStyle: React.CSSProperties = {
   fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#8bc98d",
 };
@@ -60,14 +71,18 @@ const errorStyle: React.CSSProperties = {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function AboutEditor({
+  initialEyebrow,
+  initialHeadline,
   initialBio,
   hasPhoto,
 }: {
+  initialEyebrow: string | null;
+  initialHeadline: string | null;
   initialBio: string | null;
   hasPhoto: boolean;
 }) {
-  // ── Bio state ───────────────────────────────────────────────────────────────
-  const [bioState, bioAction, bioPending] = useActionState(updateAboutBio, null);
+  // ── Content state ───────────────────────────────────────────────────────────
+  const [contentState, contentAction, contentPending] = useActionState(updateAboutContent, null);
 
   // ── Photo state ─────────────────────────────────────────────────────────────
   const fileRef = useRef<HTMLInputElement>(null);
@@ -125,7 +140,7 @@ export default function AboutEditor({
   }
 
   function handleRemovePhoto() {
-    if (!window.confirm("Remove the author photo? The About page will show a placeholder.")) return;
+    if (!window.confirm("Remove the page photo? The About page will show a placeholder.")) return;
     startRemove(async () => {
       const result = await removeAboutPhoto();
       if (!result.error) {
@@ -150,7 +165,7 @@ export default function AboutEditor({
           marginBottom: "0.3rem",
         }}
       >
-        About Page
+        About Page Editor
       </h2>
       <p
         style={{
@@ -161,23 +176,55 @@ export default function AboutEditor({
           marginBottom: "2.5rem",
         }}
       >
-        Edit the author bio and photo shown on the public About page.
-        Changes appear immediately once saved.
+        Controls the content of the public About page. Changes appear immediately once saved.
       </p>
 
-      {/* ── Bio ─────────────────────────────────────────────────────────────── */}
+      {/* ── Page Content ─────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: "2.5rem" }}>
-        <p style={sectionLabel}>Author Bio</p>
+        <p style={sectionLabel}>Page Content</p>
 
-        <form action={bioAction} style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        <form action={contentAction} style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          {/* Eyebrow */}
           <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
-            <label htmlFor="bio" style={fieldLabel}>Bio text</label>
+            <label htmlFor="eyebrow" style={fieldLabel}>Eyebrow Text</label>
+            <input
+              id="eyebrow"
+              name="eyebrow"
+              type="text"
+              defaultValue={initialEyebrow ?? ""}
+              placeholder="e.g. ABOUT THE AUTHOR"
+              style={inputStyle}
+            />
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+              Small uppercase label shown above the headline. Defaults to "ABOUT WRITEWRIGHT" if empty.
+            </p>
+          </div>
+
+          {/* Headline */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+            <label htmlFor="headline" style={fieldLabel}>Headline</label>
+            <input
+              id="headline"
+              name="headline"
+              type="text"
+              defaultValue={initialHeadline ?? ""}
+              placeholder="e.g. Alexandra Castalia"
+              style={inputStyle}
+            />
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
+              Large heading below the eyebrow. Defaults to "Welcome to WriteWright" if empty.
+            </p>
+          </div>
+
+          {/* Body Text */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.3rem" }}>
+            <label htmlFor="bio" style={fieldLabel}>Body Text</label>
             <textarea
               id="bio"
               name="bio"
               defaultValue={initialBio ?? ""}
               rows={12}
-              placeholder="Write the author biography here. Separate paragraphs with a blank line."
+              placeholder="Write the page content here. Separate paragraphs with a blank line."
               style={{
                 background: "var(--color-bg-surface)",
                 border: "1px solid var(--color-border)",
@@ -192,27 +239,20 @@ export default function AboutEditor({
                 resize: "vertical",
               }}
             />
-            <p
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.72rem",
-                color: "var(--color-ink-faint)",
-                fontStyle: "italic",
-              }}
-            >
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", color: "var(--color-ink-faint)", fontStyle: "italic" }}>
               Separate paragraphs with a blank line. Plain text only.
             </p>
           </div>
 
-          {bioState?.error && <p style={errorStyle}>{bioState.error}</p>}
-          {bioState?.success && <p style={successStyle}>{bioState.success}</p>}
+          {contentState?.error && <p style={errorStyle}>{contentState.error}</p>}
+          {contentState?.success && <p style={successStyle}>{contentState.success}</p>}
 
           <div>
             <button
               type="submit"
-              disabled={bioPending}
+              disabled={contentPending}
               style={{
-                background: bioPending ? "var(--color-border)" : "var(--color-crimson)",
+                background: contentPending ? "var(--color-border)" : "var(--color-crimson)",
                 border: "none",
                 borderRadius: "3px",
                 padding: "0.65rem 1.4rem",
@@ -220,10 +260,10 @@ export default function AboutEditor({
                 fontFamily: "var(--font-heading)",
                 fontSize: "1rem",
                 letterSpacing: "0.06em",
-                cursor: bioPending ? "default" : "pointer",
+                cursor: contentPending ? "default" : "pointer",
               }}
             >
-              {bioPending ? "Saving…" : "Save Bio"}
+              {contentPending ? "Saving…" : "Save Content"}
             </button>
           </div>
         </form>
@@ -231,9 +271,9 @@ export default function AboutEditor({
 
       <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2.5rem" }} />
 
-      {/* ── Photo ───────────────────────────────────────────────────────────── */}
+      {/* ── Page Photo ──────────────────────────────────────────────────────── */}
       <div>
-        <p style={sectionLabel}>Author Photo</p>
+        <p style={sectionLabel}>Page Photo</p>
 
         {/* Current photo preview */}
         {currentHasPhoto && !preview && (
@@ -241,7 +281,7 @@ export default function AboutEditor({
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/site/photo?${Date.now()}`}
-              alt="Current author photo"
+              alt="Current page photo"
               style={{
                 maxWidth: "200px",
                 display: "block",

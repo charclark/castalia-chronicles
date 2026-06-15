@@ -8,16 +8,18 @@ const PLACEHOLDER_BIO = `Alexandra Castalia has been weaving tales of the supern
 She writes from somewhere between midnight and dawn, sustained by strong tea and the conviction that monsters deserve their own love stories.`;
 
 export default async function AboutPage() {
-  let settings: { bio: string | null; photoData: Uint8Array | null } | null = null;
+  let settings: { eyebrow: string | null; headline: string | null; bio: string | null; photoData: Uint8Array | null } | null = null;
   try {
     settings = await prisma.siteSettings.findFirst({
       where: { id: "singleton" },
-      select: { bio: true, photoData: true },
+      select: { eyebrow: true, headline: true, bio: true, photoData: true },
     });
   } catch {
     // DB unavailable (e.g. local dev without DATABASE_URL) — use placeholders
   }
 
+  const eyebrow = settings?.eyebrow || "ABOUT WRITEWRIGHT";
+  const headline = settings?.headline || "Welcome to WriteWright";
   const bio = settings?.bio ?? PLACEHOLDER_BIO;
   const hasPhoto = !!settings?.photoData;
 
@@ -62,7 +64,7 @@ export default async function AboutPage() {
               marginBottom: "0.5rem",
             }}
           >
-            About the Author
+            {eyebrow}
           </p>
           <h1
             style={{
@@ -74,7 +76,7 @@ export default async function AboutPage() {
               lineHeight: 1.1,
             }}
           >
-            Alexandra Castalia
+            {headline}
           </h1>
           <div
             aria-hidden
@@ -102,7 +104,7 @@ export default async function AboutPage() {
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
                 src="/api/site/photo"
-                alt="Alexandra Castalia"
+                alt={headline}
                 style={{
                   width: "100%",
                   height: "auto",
@@ -162,7 +164,7 @@ export default async function AboutPage() {
             )}
           </div>
 
-          {/* Bio */}
+          {/* Body text */}
           <div style={{ flex: "1 1 300px" }}>
             {paragraphs.map((p, i) => (
               <p

@@ -6,27 +6,31 @@ import { getSession } from "@/lib/session";
 
 type AboutState = { error?: string; success?: string } | null;
 
-async function auth() {
+async function requireSuperAdmin() {
   const session = await getSession();
   if (!session) throw new Error("Not authenticated.");
+  if (!session.isSuperAdmin) throw new Error("Not authorized.");
 }
 
-export async function updateAboutBio(
+export async function updateAboutContent(
   _prev: AboutState,
   formData: FormData
 ): Promise<AboutState> {
-  await auth();
-  const bio = (formData.get("bio") as string | null) ?? null;
+  await requireSuperAdmin();
+
+  const eyebrow = (formData.get("eyebrow") as string | null)?.trim() || null;
+  const headline = (formData.get("headline") as string | null)?.trim() || null;
+  const bio = (formData.get("bio") as string | null)?.trim() || null;
 
   await prisma.siteSettings.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", bio: bio?.trim() || null },
-    update: { bio: bio?.trim() || null },
+    create: { id: "singleton", eyebrow, headline, bio },
+    update: { eyebrow, headline, bio },
   });
 
   revalidatePath("/about");
   revalidatePath("/admin/about");
-  return { success: "Bio saved." };
+  return { success: "Content saved." };
 }
 
 // Called from the client after compressing the image client-side.
@@ -35,7 +39,7 @@ export async function updateAboutPhoto(
   _prev: { error?: string } | null,
   formData: FormData
 ): Promise<{ error?: string }> {
-  await auth();
+  await requireSuperAdmin();
 
   const file = formData.get("photo") as File | null;
   if (!file || file.size === 0) return { error: "No photo provided." };
@@ -56,7 +60,7 @@ export async function updateAboutPhoto(
 }
 
 export async function removeAboutPhoto(): Promise<{ error?: string }> {
-  await auth();
+  await requireSuperAdmin();
 
   await prisma.siteSettings.upsert({
     where: { id: "singleton" },

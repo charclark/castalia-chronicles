@@ -263,10 +263,14 @@ model PlotItem {
 
 // --- Site Settings ---
 // Singleton record (id = "singleton") storing site-wide public settings.
-// bio: author biography, plain text (paragraphs split by \n\n).
-// photoData: compressed JPEG bytes for the author photo, served via /api/site/photo.
+// eyebrow: small uppercase label at top of About page (e.g. "ABOUT THE AUTHOR").
+// headline: large heading on About page (e.g. "Alexandra Castalia").
+// bio: body text, plain text (paragraphs split by \n\n).
+// photoData: compressed JPEG bytes for the page photo, served via /api/site/photo.
 model SiteSettings {
   id        String   @id @default("singleton")
+  eyebrow   String?
+  headline  String?
   bio       String?
   photoData Bytes?
   updatedAt DateTime @updatedAt
