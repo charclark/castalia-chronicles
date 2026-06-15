@@ -28,23 +28,26 @@ export async function saveAuthorProfile(
   const headline = (formData.get("headline") as string | null)?.trim() || null;
   const bodyText = (formData.get("bodyText") as string | null)?.trim() || null;
 
+  const photoFile = formData.get("photo") as File | null;
+  let photoData: Uint8Array<ArrayBuffer> | undefined;
+  if (photoFile && photoFile.size > 0) {
+    if (photoFile.size > 8 * 1024 * 1024) return { error: "Photo too large (max 8 MB)." };
+    photoData = new Uint8Array(await photoFile.arrayBuffer()) as Uint8Array<ArrayBuffer>;
+  }
+
+  const sharedData = {
+    eyebrowText,
+    headline,
+    bodyText,
+    status: "pending",
+    submittedAt: new Date(),
+    ...(photoData !== undefined ? { photoData } : {}),
+  };
+
   await prisma.authorProfile.upsert({
     where: { userId: session.userId },
-    create: {
-      userId: session.userId,
-      eyebrowText,
-      headline,
-      bodyText,
-      status: "pending",
-      submittedAt: new Date(),
-    },
-    update: {
-      eyebrowText,
-      headline,
-      bodyText,
-      status: "pending",
-      submittedAt: new Date(),
-    },
+    create: { userId: session.userId, ...sharedData },
+    update: sharedData,
   });
 
   revalidatePath("/admin/author-profile");
@@ -52,43 +55,31 @@ export async function saveAuthorProfile(
   return { success: "Profile sent to SuperAdmin Char for approval. Stay tuned..." };
 }
 
-export async function saveAuthorPhoto(
-  _prev: { error?: string } | null,
-  formData: FormData
-): Promise<{ error?: string }> {
+export async function removeAuthorPhoto(): Promise<{ error?: string }> {
   const session = await requireAuth();
 
-  const file = formData.get("photo") as File | null;
-  if (!file || file.size === 0) return { error: "No photo provided." };
-  if (file.size > 8 * 1024 * 1024) return { error: "File too large (max 8 MB)." };
-
-  const arrayBuffer = await file.arrayBuffer();
-  const photoData = Buffer.from(arrayBuffer);
-
-  await prisma.authorProfile.upsert({
-    where: { userId: session.userId },
-    create: {
-      userId: session.userId,
-      photoData,
-      status: "pending",
-      submittedAt: new Date(),
-    },
-    update: { photoData },
-  });
+  try {
+    await prisma.authorProfile.update({
+      where: { userId: session.userId },
+      data: { photoData: null },
+    });
+  } catch {
+    return { error: "No profile found." };
+  }
 
   revalidatePath("/admin/author-profile");
   revalidatePath("/our-authors");
   return {};
 }
 
-export async function removeAuthorPhoto(): Promise<{ error?: string }> {
+export async function deleteAuthorProfile(): Promise<{ error?: string }> {
   const session = await requireAuth();
 
-  await prisma.authorProfile.upsert({
-    where: { userId: session.userId },
-    create: { userId: session.userId, photoData: null, status: "pending", submittedAt: new Date() },
-    update: { photoData: null },
-  });
+  try {
+    await prisma.authorProfile.delete({ where: { userId: session.userId } });
+  } catch {
+    return { error: "No profile found." };
+  }
 
   revalidatePath("/admin/author-profile");
   revalidatePath("/our-authors");
