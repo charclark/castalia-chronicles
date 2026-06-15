@@ -102,7 +102,7 @@ export default function HomePage() {
           marginBottom: "clamp(2.5rem, 6vh, 4rem)",
         }}
       >
-        Crafted for authors who build worlds in the dark
+        A universe for readers. A home for independent authors.
       </p>
 
       {/* CTA links */}
