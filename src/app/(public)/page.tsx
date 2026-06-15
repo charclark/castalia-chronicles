@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function HomePage() {
   return (
     <main
@@ -15,17 +17,17 @@ export default function HomePage() {
         textAlign: "center",
       }}
     >
-      {/* Vertical rule */}
-      <div
-        aria-hidden
-        style={{
-          width: "1px",
-          height: "clamp(20px, 3vh, 40px)",
-          background:
-            "linear-gradient(to bottom, transparent, var(--color-gold-dim), transparent)",
-          marginBottom: "clamp(0.75rem, 1.5vh, 1.25rem)",
-        }}
-      />
+      {/* Hero illustration */}
+      <div style={{ marginBottom: "clamp(1.25rem, 3vh, 2rem)", marginTop: "clamp(0.5rem, 1.5vh, 1rem)" }}>
+        <Image
+          src="/hero-illustration.jpg"
+          alt=""
+          width={120}
+          height={138}
+          style={{ display: "block", margin: "0 auto" }}
+          priority
+        />
+      </div>
 
       {/* Site title */}
       <h1
