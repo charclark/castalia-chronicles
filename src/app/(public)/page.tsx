@@ -20,7 +20,7 @@ export default function HomePage() {
       {/* Hero illustration */}
       <div style={{ marginBottom: "clamp(1.25rem, 3vh, 2rem)", marginTop: "clamp(0.5rem, 1.5vh, 1rem)" }}>
         <Image
-          src="/hero-illustration.jpg"
+          src="/hero-illustration.png"
           alt=""
           width={120}
           height={138}
