@@ -611,8 +611,10 @@ export default function CharacterForm({
   const [deletePending, startDelete] = useTransition();
 
   useEffect(() => {
-    if (isNew && state?.success && state.id) {
-      router.push(`/admin/characters/${state.id}`);
+    if (isNew && state?.success) {
+      setFormKey((k) => k + 1);
+      setPendingRels([]);
+      setSelectedRoles([]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
@@ -1028,6 +1030,42 @@ export default function CharacterForm({
 
         </fieldset>
 
+        {/* ── Relationships (existing character) ── */}
+        {!isNew && (
+          <section>
+            <div style={{ ...sectionHead, marginBottom: "1.25rem", fontSize: "1.25rem" }}>
+              Relationships
+            </div>
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1rem" }}>
+              Links to other characters — used to auto-draw the Connections Map.
+            </p>
+            {relationships && relationships.length > 0 ? (
+              <div>
+                {relationships.map((rel) => (
+                  <RelRow
+                    key={rel.id}
+                    rel={rel}
+                    thisId={character.id}
+                    onRemove={handleRelRemove}
+                    canEdit={canEdit}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "0.5rem" }}>
+                No relationships yet.
+              </p>
+            )}
+            {canEdit && (
+              <AddRelForm
+                thisId={character.id}
+                allChars={allChars}
+                onAdded={() => router.refresh()}
+              />
+            )}
+          </section>
+        )}
+
         {/* ── Relationships (creation form) ── */}
         {isNew && canEdit && (
           <section>
@@ -1098,51 +1136,6 @@ export default function CharacterForm({
         )}
       </form>
 
-      {/* ── Relationships (only for existing characters) ── */}
-      {!isNew && (
-        <section style={{ marginTop: "3rem" }}>
-          <div
-            style={{
-              ...sectionHead,
-              marginBottom: "1.25rem",
-              fontSize: "1.25rem",
-            }}
-          >
-            Relationships
-          </div>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1rem" }}>
-            Links to other characters — used to auto-draw the Connections Map.
-          </p>
-
-          {/* Existing relationships */}
-          {relationships && relationships.length > 0 ? (
-            <div>
-              {relationships.map((rel) => (
-                <RelRow
-                  key={rel.id}
-                  rel={rel}
-                  thisId={character.id}
-                  onRemove={handleRelRemove}
-                  canEdit={canEdit}
-                />
-              ))}
-            </div>
-          ) : (
-            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "0.5rem" }}>
-              No relationships yet.
-            </p>
-          )}
-
-          {/* Add relationship — edit access only */}
-          {canEdit && (
-            <AddRelForm
-              thisId={character.id}
-              allChars={allChars}
-              onAdded={() => router.refresh()}
-            />
-          )}
-        </section>
-      )}
     </div>
   );
 }
