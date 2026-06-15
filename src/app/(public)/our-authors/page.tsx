@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
+const cardHoverCss = `
+.author-card { transition: border-color 0.15s; }
+.author-card:hover { border-color: var(--color-gold-dim); }
+`;
+
 export const dynamic = "force-dynamic";
 
 export default async function OurAuthorsPage() {
@@ -38,6 +43,7 @@ export default async function OurAuthorsPage() {
         background: "var(--color-bg)",
       }}
     >
+      <style>{cardHoverCss}</style>
       <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
         <Link
           href="/"
@@ -86,15 +92,13 @@ export default async function OurAuthorsPage() {
                   style={{ textDecoration: "none" }}
                 >
                   <div
+                    className="author-card"
                     style={{
                       background: "var(--color-bg-elevated)",
                       border: "1px solid var(--color-border)",
                       borderRadius: "4px",
                       overflow: "hidden",
-                      transition: "border-color 0.15s",
                     }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-gold-dim)")}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border)")}
                   >
                     {/* Photo */}
                     <div style={{ aspectRatio: "4/3", overflow: "hidden", background: "var(--color-bg-surface)" }}>
