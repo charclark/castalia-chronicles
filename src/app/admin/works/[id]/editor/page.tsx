@@ -1,9 +1,9 @@
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import WritingEditor from "@/components/WritingEditor";
 import { getFlags } from "@/app/actions/flags";
 import { getCanEditUniverse } from "@/lib/auth-utils";
+import { getCurrentUniverseId } from "@/lib/universe";
 
 export default async function EditorPage({
   params,
@@ -12,8 +12,7 @@ export default async function EditorPage({
 }) {
   const { id } = await params;
 
-  const cookieStore = await cookies();
-  const universeId = cookieStore.get("selected-universe")?.value;
+  const universeId = await getCurrentUniverseId().catch(() => null);
   if (!universeId) notFound();
 
   const work = await prisma.work.findFirst({

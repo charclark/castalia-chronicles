@@ -91,6 +91,7 @@ export default function ImageUploader() {
   const [category, setCategory] = useState<string>("other");
   const [compressing, setCompressing] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [pending, startTransition] = useTransition();
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -103,6 +104,7 @@ export default function ImageUploader() {
     }
 
     setError("");
+    setSuccess("");
     setCompressing(true);
     setOrigSize(file.size);
 
@@ -140,8 +142,21 @@ export default function ImageUploader() {
       fd.append("label", label.trim());
       fd.append("category", category);
       const result = await uploadImage(null, fd);
-      // uploadImage redirects on success; only reaches here on error
-      if (result?.error) setError(result.error);
+      if (result?.error) {
+        setError(result.error);
+      } else if (result?.success) {
+        setSuccess(result.success);
+        // Reset form
+        if (preview) URL.revokeObjectURL(preview);
+        setPreview(null);
+        setCompressed(null);
+        setOrigSize(0);
+        setCompSize(0);
+        setDims({ w: 0, h: 0 });
+        setLabel("");
+        setCategory("other");
+        if (fileRef.current) fileRef.current.value = "";
+      }
     });
   }
 
@@ -169,6 +184,16 @@ export default function ImageUploader() {
       <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "2rem" }}>
         Images are compressed before saving. They are stored in the database and survive redeploys.
       </p>
+
+      {success && (
+        <div role="status" style={{
+          background: "rgba(76,139,64,0.12)", border: "1px solid rgba(76,139,64,0.35)",
+          borderRadius: "3px", padding: "0.7rem 1rem", color: "#8bc98d",
+          fontFamily: "var(--font-body)", fontSize: "0.9rem", marginBottom: "1.25rem",
+        }}>
+          {success}
+        </div>
+      )}
 
       {error && (
         <div role="alert" style={{

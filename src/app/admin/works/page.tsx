@@ -1,9 +1,9 @@
-import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { getCanEditUniverse } from "@/lib/auth-utils";
+import { getCurrentUniverseId } from "@/lib/universe";
 import { createWork } from "@/app/actions/works";
 import WorkSharePopup from "./WorkSharePopup";
 
@@ -14,8 +14,7 @@ export default async function WorksPage({
 }: {
   searchParams: Promise<{ share?: string }>;
 }) {
-  const cookieStore = await cookies();
-  const universeId = cookieStore.get("selected-universe")?.value;
+  const universeId = await getCurrentUniverseId().catch(() => null);
   if (!universeId) notFound();
 
   const session = await getSession();

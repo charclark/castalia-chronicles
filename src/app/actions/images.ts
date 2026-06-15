@@ -27,11 +27,12 @@ export async function uploadImage(
   const data = Buffer.from(arrayBuffer);
   const mimeType = file.type || "image/jpeg";
 
-  const image = await prisma.image.create({
+  await prisma.image.create({
     data: { universeId, label, category, mimeType, data },
   });
 
-  redirect(`/admin/images/${image.id}`);
+  revalidatePath("/admin", "layout");
+  return { success: "Image added successfully." };
 }
 
 export async function updateImage(
