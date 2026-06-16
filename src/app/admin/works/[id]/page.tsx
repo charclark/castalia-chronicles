@@ -67,6 +67,7 @@ export default async function WorkPage({
         status: true,
         submittedAt: true,
         rejectionNote: true,
+        pendingEdits: true,
       },
     }),
     prisma.discoverBooksSubmission.findUnique({
@@ -113,6 +114,7 @@ export default async function WorkPage({
         status: rawSubmission.status,
         submittedAt: rawSubmission.submittedAt.toISOString(),
         rejectionNote: rawSubmission.rejectionNote ?? null,
+        hasPendingEdit: !!rawSubmission.pendingEdits,
       }
     : null;
 

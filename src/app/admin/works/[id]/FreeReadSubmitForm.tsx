@@ -19,6 +19,7 @@ type Submission = {
   status: string;
   submittedAt: string;
   rejectionNote: string | null;
+  hasPendingEdit?: boolean;
 };
 
 type Props = {
@@ -110,7 +111,8 @@ export default function FreeReadSubmitForm({ workId, workTitle, chapters, existi
   const [coverFile, setCoverFile] = useState<File | null>(null);
 
   const [state, formAction, pending] = useActionState(submitFreeRead, null);
-  const submitted = state?.success === "submitted";
+  const editPending = state?.success === "edit_pending";
+  const submitted = !!state?.success && !editPending;
   const wc = wordCount(description);
   const isReplace = sub && (sub.status === "approved" || sub.status === "pending");
 
@@ -130,14 +132,16 @@ export default function FreeReadSubmitForm({ workId, workTitle, chapters, existi
   }
 
   // ── Success state ──
-  if (submitted) {
+  if (submitted || editPending) {
     return (
       <div style={{
         background: "rgba(76,139,64,0.08)", border: "1px solid rgba(76,139,64,0.35)",
         borderRadius: "4px", padding: "1.1rem 1.25rem",
       }}>
         <p style={{ fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "#8bc98d", margin: 0 }}>
-          Your submission has been sent to WriteWright for approval. Stay tuned!
+          {editPending
+            ? "Your edit is under review. Your currently published version will remain live until it's approved by WriteWright."
+            : "Your submission has been sent to WriteWright for approval. Stay tuned!"}
         </p>
       </div>
     );
@@ -164,6 +168,11 @@ export default function FreeReadSubmitForm({ workId, workTitle, chapters, existi
           {currentStatus === "rejected" && sub.rejectionNote && (
             <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontStyle: "italic", color: "#d4848e", margin: 0 }}>
               Feedback from WriteWright: {sub.rejectionNote}
+            </p>
+          )}
+          {sub.hasPendingEdit && (
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontStyle: "italic", color: "var(--color-gold)", margin: 0 }}>
+              An edit is pending review. Your published version stays live until it's approved.
             </p>
           )}
           <p style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", color: "var(--color-ink)", margin: 0 }}>
@@ -218,7 +227,7 @@ export default function FreeReadSubmitForm({ workId, workTitle, chapters, existi
             }}>
               <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-gold)", margin: 0 }}>
                 {sub.status === "approved"
-                  ? "You currently have an approved version of this work published on Start Reading. Submitting a new version will replace the existing one and remove it from public view until the new version is approved by WriteWright."
+                  ? "Your current published version will remain live until your edited version is approved by WriteWright."
                   : "You have a pending submission for this work. Resubmitting will replace it."}
               </p>
             </div>

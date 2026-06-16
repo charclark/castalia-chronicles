@@ -18,6 +18,7 @@ type FreeReadSub = {
   reviewedAt: string | null;
   publishedAt: string | null;
   rejectionNote: string | null;
+  hasPendingEdit: boolean;
   work: { id: string; title: string };
 };
 
@@ -36,6 +37,7 @@ type DiscoverBooksSub = {
   reviewedAt: string | null;
   publishedAt: string | null;
   rejectionNote: string | null;
+  hasPendingEdit: boolean;
   work: { id: string; title: string };
 };
 
@@ -72,6 +74,14 @@ const metaText: React.CSSProperties = {
 
 // ── Free Read Row ─────────────────────────────────────────────────────────────
 
+function EditPendingNote() {
+  return (
+    <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontStyle: "italic", color: "var(--color-gold)", marginTop: "0.3rem" }}>
+      An edit is pending review. Your published version stays live until it's approved.
+    </p>
+  );
+}
+
 function FreeReadRow({ sub }: { sub: FreeReadSub }) {
   const [status, setStatus] = useState(sub.status);
   const [pending, startTransition] = useTransition();
@@ -107,11 +117,13 @@ function FreeReadRow({ sub }: { sub: FreeReadSub }) {
             </p>
           )}
 
-          {status === "pending" && (
+          {status === "pending" && !sub.hasPendingEdit && (
             <p style={{ ...metaText, marginTop: "0.3rem", fontStyle: "italic" }}>
               Under review — you'll hear back soon.
             </p>
           )}
+
+          {sub.hasPendingEdit && <EditPendingNote />}
         </div>
       </div>
 
@@ -208,11 +220,13 @@ function DiscoverBooksRow({ sub }: { sub: DiscoverBooksSub }) {
             </p>
           )}
 
-          {status === "pending" && (
+          {status === "pending" && !sub.hasPendingEdit && (
             <p style={{ ...metaText, marginTop: "0.3rem", fontStyle: "italic" }}>
               Under review — you'll hear back soon.
             </p>
           )}
+
+          {sub.hasPendingEdit && <EditPendingNote />}
         </div>
       </div>
 

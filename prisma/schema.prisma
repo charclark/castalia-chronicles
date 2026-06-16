@@ -488,6 +488,10 @@ model FreeReadSubmission {
   reviewedAt         DateTime?
   publishedAt        DateTime?
   rejectionNote      String?
+  // When an approved submission is edited, the new content is stored here
+  // so the live version stays visible until Char approves the edit.
+  pendingEdits       String?   // JSON: all text/meta fields of the proposed edit
+  pendingCoverImageData Bytes? // binary cover for the proposed edit
   likes              FreeReadLike[]
 
   @@index([status])
@@ -531,6 +535,8 @@ model DiscoverBooksSubmission {
   reviewedAt       DateTime?
   publishedAt      DateTime?
   rejectionNote    String?
+  pendingEdits     String?   // JSON: all text/meta fields of the proposed edit
+  pendingCoverImageData Bytes? // binary cover for the proposed edit
   likes            DiscoverBooksLike[]
 
   @@index([status])

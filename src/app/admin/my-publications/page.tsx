@@ -26,6 +26,7 @@ export default async function MyPublicationsPage() {
         reviewedAt: true,
         publishedAt: true,
         rejectionNote: true,
+        pendingEdits: true,
         work: { select: { id: true, title: true } },
       },
     }),
@@ -47,6 +48,7 @@ export default async function MyPublicationsPage() {
         reviewedAt: true,
         publishedAt: true,
         rejectionNote: true,
+        pendingEdits: true,
         work: { select: { id: true, title: true } },
       },
     }),
@@ -74,6 +76,7 @@ export default async function MyPublicationsPage() {
           reviewedAt: s.reviewedAt?.toISOString() ?? null,
           publishedAt: s.publishedAt?.toISOString() ?? null,
           rejectionNote: s.rejectionNote ?? null,
+          hasPendingEdit: !!s.pendingEdits,
           work: s.work,
         }))}
         discoverBooksSubs={discoverBooksSubs.map((s) => ({
@@ -91,6 +94,7 @@ export default async function MyPublicationsPage() {
           reviewedAt: s.reviewedAt?.toISOString() ?? null,
           publishedAt: s.publishedAt?.toISOString() ?? null,
           rejectionNote: s.rejectionNote ?? null,
+          hasPendingEdit: !!s.pendingEdits,
           work: s.work,
         }))}
       />

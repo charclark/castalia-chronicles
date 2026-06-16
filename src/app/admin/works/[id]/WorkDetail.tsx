@@ -48,6 +48,7 @@ type FreeReadSubmission = {
   status: string;
   submittedAt: string;
   rejectionNote: string | null;
+  hasPendingEdit: boolean;
 } | null;
 
 type DiscoverBooksSubmission = {

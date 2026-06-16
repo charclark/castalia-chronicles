@@ -318,6 +318,10 @@ export default function DiscoverBooksSubmitForm({
       const result = await submitDiscoverBooks(null, fd);
       if (result.error) {
         setFormError(result.error);
+      } else if (result.success === "edit_pending") {
+        setEditing(false);
+        setSuccessBanner(true);
+        // status stays "approved" — live version remains untouched
       } else {
         setStatus("pending");
         setEditing(false);
@@ -339,7 +343,9 @@ export default function DiscoverBooksSubmitForm({
             borderRadius: "4px", padding: "0.85rem 1.1rem",
             fontFamily: "var(--font-body)", fontSize: "0.9rem", color: "#8bc98d",
           }}>
-            Your submission has been sent to WriteWright for approval. Stay tuned!
+            {status === "approved"
+              ? "Your edit is under review. Your currently published listing will remain live until it's approved by WriteWright."
+              : "Your submission has been sent to WriteWright for approval. Stay tuned!"}
           </div>
         )}
 
@@ -427,7 +433,7 @@ export default function DiscoverBooksSubmitForm({
           borderRadius: "4px", padding: "0.85rem 1.1rem",
           fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "var(--color-gold)", lineHeight: 1.6,
         }}>
-          You currently have an approved listing for this work on Discover Books. Submitting a new version will replace the existing one and remove it from public view until the new version is approved by WriteWright.
+          Your current published listing will remain live until your edited version is approved by WriteWright.
         </div>
       )}
 

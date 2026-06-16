@@ -20,7 +20,6 @@ export async function submitFreeRead(
   const workId = formData.get("workId") as string;
   if (!workId) return { error: "Work ID missing." };
 
-  // Verify work belongs to this universe
   const work = await prisma.work.findFirst({ where: { id: workId, universeId } });
   if (!work) return { error: "Work not found." };
 
@@ -50,7 +49,6 @@ export async function submitFreeRead(
   if (coverBgIndex !== null && (coverBgIndex < 1 || coverBgIndex > 10))
     return { error: "Invalid background index." };
 
-  // Cover image upload — compress via Sharp
   let coverImageData: Uint8Array<ArrayBuffer> | null = null;
   const coverFile = formData.get("coverImage") as File | null;
   if (coverFile && coverFile.size > 0) {
@@ -66,6 +64,42 @@ export async function submitFreeRead(
     }
   }
 
+  const keepCover = formData.get("keepCover") === "1";
+  const existing = await prisma.freeReadSubmission.findUnique({ where: { workId } });
+
+  // ── If the current submission is live (approved), stage edits instead of
+  //    overwriting — the approved version stays visible until Char approves.
+  if (existing && existing.status === "approved") {
+    const pendingEdit = {
+      submissionType,
+      selectedChapterIds: submissionType === "chapters" ? JSON.stringify(selectedChapterIds) : null,
+      title,
+      description,
+      contentRating,
+      coverBgIndex: coverBgIndex ?? null,
+      keepExistingCover: !coverImageData && (keepCover || !coverBgIndex),
+    };
+
+    const updateData: Record<string, unknown> = {
+      pendingEdits: JSON.stringify(pendingEdit),
+      rejectionNote: null, // clear any prior edit rejection note
+    };
+    if (coverImageData) {
+      updateData.pendingCoverImageData = coverImageData;
+    }
+
+    await prisma.freeReadSubmission.update({
+      where: { workId },
+      data: updateData,
+    });
+
+    revalidatePath(`/admin/works/${workId}`);
+    revalidatePath("/admin/author-approvals");
+    revalidatePath("/admin/my-publications");
+    return { success: "edit_pending" };
+  }
+
+  // ── First submission or resubmission of a non-approved submission ─────────
   const data = {
     userId: session.userId,
     submissionType,
@@ -78,37 +112,29 @@ export async function submitFreeRead(
     submittedAt: new Date(),
     reviewedAt: null,
     publishedAt: null,
+    pendingEdits: null,
+    pendingCoverImageData: null,
+    rejectionNote: null,
     ...(coverImageData !== null ? { coverImageData } : {}),
-    // If re-uploading without a new file, keep existing image — handled via keepCover flag
   };
 
-  const keepCover = formData.get("keepCover") === "1";
-
-  const existing = await prisma.freeReadSubmission.findUnique({ where: { workId } });
-
   if (existing) {
-    // Resubmit — update but preserve coverImageData if no new file uploaded and keepCover=true
     await prisma.freeReadSubmission.update({
       where: { workId },
       data: {
         ...data,
-        ...(keepCover && coverImageData === null
-          ? {} // preserve existing image
-          : { coverImageData: coverImageData ?? null }),
+        ...(keepCover && coverImageData === null ? {} : { coverImageData: coverImageData ?? null }),
       },
     });
   } else {
     await prisma.freeReadSubmission.create({
-      data: {
-        workId,
-        ...data,
-        coverImageData: coverImageData ?? null,
-      },
+      data: { workId, ...data, coverImageData: coverImageData ?? null },
     });
   }
 
   revalidatePath(`/admin/works/${workId}`);
   revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
   revalidatePath("/free-read");
   return { success: "submitted" };
 }
@@ -123,35 +149,112 @@ export async function unpublishFreeRead(workId: string): Promise<{ error?: strin
 
   await prisma.freeReadSubmission.updateMany({
     where: { workId },
-    data: { status: "rejected", reviewedAt: new Date() },
+    data: { status: "rejected", reviewedAt: new Date(), pendingEdits: null, pendingCoverImageData: null },
   });
 
   revalidatePath(`/admin/works/${workId}`);
+  revalidatePath("/admin/my-publications");
   revalidatePath("/free-read");
   return {};
 }
 
-// ── Superadmin: approve / reject ─────────────────────────────────────────────
+// ── Superadmin: approve ───────────────────────────────────────────────────────
 
 export async function approveFreeReadSubmission(id: string): Promise<void> {
   await requireSuperAdmin();
-  await prisma.freeReadSubmission.update({
+
+  const sub = await prisma.freeReadSubmission.findUnique({
     where: { id },
-    data: { status: "approved", reviewedAt: new Date(), publishedAt: new Date() },
+    select: { pendingEdits: true, pendingCoverImageData: true, publishedAt: true },
   });
+  if (!sub) return;
+
+  if (sub.pendingEdits) {
+    // Approving an edit to an already-live submission: apply staged edits
+    type PendingEdit = {
+      submissionType: string;
+      selectedChapterIds: string | null;
+      title: string;
+      description: string;
+      contentRating: string;
+      coverBgIndex: number | null;
+      keepExistingCover: boolean;
+    };
+    const edit = JSON.parse(sub.pendingEdits) as PendingEdit;
+
+    const coverUpdate: Record<string, unknown> = {};
+    if (sub.pendingCoverImageData) {
+      coverUpdate.coverImageData = sub.pendingCoverImageData;
+      coverUpdate.coverBgIndex = null;
+    } else if (!edit.keepExistingCover && edit.coverBgIndex !== null) {
+      coverUpdate.coverBgIndex = edit.coverBgIndex;
+      coverUpdate.coverImageData = null;
+    }
+    // if keepExistingCover: leave coverImageData and coverBgIndex unchanged
+
+    await prisma.freeReadSubmission.update({
+      where: { id },
+      data: {
+        submissionType: edit.submissionType,
+        selectedChapterIds: edit.selectedChapterIds,
+        title: edit.title,
+        description: edit.description,
+        contentRating: edit.contentRating,
+        reviewedAt: new Date(),
+        pendingEdits: null,
+        pendingCoverImageData: null,
+        rejectionNote: null,
+        ...coverUpdate,
+      },
+    });
+  } else {
+    // Approving a new (first-time or resubmitted) submission
+    await prisma.freeReadSubmission.update({
+      where: { id },
+      data: { status: "approved", reviewedAt: new Date(), publishedAt: sub.publishedAt ?? new Date() },
+    });
+  }
+
   revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
   revalidatePath("/free-read");
 }
 
+// ── Superadmin: reject ────────────────────────────────────────────────────────
+
 export async function rejectFreeReadSubmission(id: string, rejectionNote?: string): Promise<void> {
   await requireSuperAdmin();
-  await prisma.freeReadSubmission.update({
+
+  const sub = await prisma.freeReadSubmission.findUnique({
     where: { id },
-    data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
+    select: { pendingEdits: true },
   });
+  if (!sub) return;
+
+  if (sub.pendingEdits) {
+    // Rejecting an edit: clear the staged edit, keep the approved version live
+    await prisma.freeReadSubmission.update({
+      where: { id },
+      data: {
+        pendingEdits: null,
+        pendingCoverImageData: null,
+        rejectionNote: rejectionNote ?? null,
+      },
+    });
+  } else {
+    // Rejecting a new submission
+    await prisma.freeReadSubmission.update({
+      where: { id },
+      data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
+    });
+  }
+
   revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
   revalidatePath("/free-read");
 }
+
+// ── Superadmin: dismiss ───────────────────────────────────────────────────────
 
 export async function dismissFreeReadSubmission(id: string): Promise<void> {
   await requireSuperAdmin();

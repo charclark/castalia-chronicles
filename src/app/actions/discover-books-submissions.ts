@@ -12,9 +12,9 @@ function countWords(text: string): number {
 }
 
 export async function submitDiscoverBooks(
-  _prev: { error?: string; success?: boolean } | null,
+  _prev: { error?: string; success?: boolean | string } | null,
   formData: FormData
-): Promise<{ error?: string; success?: boolean }> {
+): Promise<{ error?: string; success?: boolean | string }> {
   const { session } = await requireUniverseEdit();
   const userId = session.userId;
 
@@ -36,11 +36,8 @@ export async function submitDiscoverBooks(
   if (!description) return { error: "Description is required." };
   if (!contentRating) return { error: "Content rating is required." };
   if (countWords(description) > 100) return { error: "Description must be 100 words or fewer." };
-
-  // Validate URL
   try { new URL(purchaseUrl); } catch { return { error: "Purchase URL must be a valid URL (include https://)." }; }
 
-  // Cover: either uploaded file, or preset background, or keep existing
   let coverImageData: Uint8Array<ArrayBuffer> | undefined = undefined;
   let coverBgIndex: number | null = null;
 
@@ -57,24 +54,56 @@ export async function submitDiscoverBooks(
     if (idx >= 1 && idx <= 10) coverBgIndex = idx;
   }
 
-  // Check work belongs to this user's universe
   const work = await prisma.work.findFirst({
     where: { id: workId },
     select: { id: true, universeId: true },
   });
   if (!work) return { error: "Work not found." };
 
-  // Build upsert data
   const existing = await prisma.discoverBooksSubmission.findUnique({
     where: { workId },
-    select: { id: true, coverImageData: true },
+    select: { id: true, coverImageData: true, status: true },
   });
 
+  // ── If currently live (approved), stage the edit — don't overwrite the
+  //    live version. It stays visible until Char approves the edit.
+  if (existing && existing.status === "approved") {
+    const pendingEdit = {
+      bookTitle,
+      authorName,
+      purchaseUrl,
+      purchaseLinkText,
+      description,
+      contentRating,
+      coverBgIndex,
+      keepExistingCover: !coverImageData && (keepCover || !coverBgIndex),
+    };
+
+    const updateData: Record<string, unknown> = {
+      pendingEdits: JSON.stringify(pendingEdit),
+      rejectionNote: null,
+    };
+    if (coverImageData) {
+      updateData.pendingCoverImageData = coverImageData;
+    }
+
+    await prisma.discoverBooksSubmission.update({
+      where: { workId },
+      data: updateData,
+    });
+
+    revalidatePath(`/admin/works/${workId}`);
+    revalidatePath("/admin/author-approvals");
+    revalidatePath("/admin/my-publications");
+    return { success: "edit_pending" };
+  }
+
+  // ── First submission or resubmission of a non-approved submission ─────────
   const coverDataForWrite: Uint8Array<ArrayBuffer> | null | undefined =
     coverImageData !== undefined
       ? coverImageData
       : keepCover && existing?.coverImageData
-      ? undefined // don't touch — use prisma undefined to skip update
+      ? undefined // don't touch — prisma undefined skips the field
       : null;
 
   const baseData = {
@@ -90,6 +119,9 @@ export async function submitDiscoverBooks(
     submittedAt: new Date(),
     reviewedAt: null,
     publishedAt: null,
+    pendingEdits: null,
+    pendingCoverImageData: null,
+    rejectionNote: null,
   };
 
   if (existing) {
@@ -111,6 +143,8 @@ export async function submitDiscoverBooks(
   }
 
   revalidatePath(`/admin/works/${workId}`);
+  revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
   revalidatePath("/books");
   return { success: true };
 }
@@ -119,29 +153,108 @@ export async function unpublishDiscoverBooks(workId: string): Promise<void> {
   await requireUniverseEdit();
   await prisma.discoverBooksSubmission.update({
     where: { workId },
-    data: { status: "rejected", reviewedAt: new Date() },
+    data: { status: "rejected", reviewedAt: new Date(), pendingEdits: null, pendingCoverImageData: null },
   });
   revalidatePath(`/admin/works/${workId}`);
+  revalidatePath("/admin/my-publications");
   revalidatePath("/books");
 }
 
 export async function approveDiscoverBooksSubmission(id: string): Promise<void> {
   await requireSuperAdmin();
-  await prisma.discoverBooksSubmission.update({
+
+  const sub = await prisma.discoverBooksSubmission.findUnique({
     where: { id },
-    data: { status: "approved", reviewedAt: new Date(), publishedAt: new Date() },
+    select: { pendingEdits: true, pendingCoverImageData: true, publishedAt: true },
   });
+  if (!sub) return;
+
+  if (sub.pendingEdits) {
+    // Approving an edit to a live listing: apply staged edits
+    type PendingEdit = {
+      bookTitle: string;
+      authorName: string;
+      purchaseUrl: string;
+      purchaseLinkText: string;
+      description: string;
+      contentRating: string;
+      coverBgIndex: number | null;
+      keepExistingCover: boolean;
+    };
+    const edit = JSON.parse(sub.pendingEdits) as PendingEdit;
+
+    const coverUpdate: Record<string, unknown> = {};
+    if (sub.pendingCoverImageData) {
+      coverUpdate.coverImageData = sub.pendingCoverImageData;
+      coverUpdate.coverBgIndex = null;
+    } else if (!edit.keepExistingCover && edit.coverBgIndex !== null) {
+      coverUpdate.coverBgIndex = edit.coverBgIndex;
+      coverUpdate.coverImageData = null;
+    }
+
+    await prisma.discoverBooksSubmission.update({
+      where: { id },
+      data: {
+        bookTitle: edit.bookTitle,
+        authorName: edit.authorName,
+        purchaseUrl: edit.purchaseUrl,
+        purchaseLinkText: edit.purchaseLinkText,
+        description: edit.description,
+        contentRating: edit.contentRating,
+        reviewedAt: new Date(),
+        pendingEdits: null,
+        pendingCoverImageData: null,
+        rejectionNote: null,
+        ...coverUpdate,
+      },
+    });
+  } else {
+    // Approving a new submission
+    await prisma.discoverBooksSubmission.update({
+      where: { id },
+      data: {
+        status: "approved",
+        reviewedAt: new Date(),
+        publishedAt: sub.publishedAt ?? new Date(),
+      },
+    });
+  }
+
   revalidatePath("/books");
   revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
 }
 
 export async function rejectDiscoverBooksSubmission(id: string, rejectionNote?: string): Promise<void> {
   await requireSuperAdmin();
-  await prisma.discoverBooksSubmission.update({
+
+  const sub = await prisma.discoverBooksSubmission.findUnique({
     where: { id },
-    data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
+    select: { pendingEdits: true },
   });
+  if (!sub) return;
+
+  if (sub.pendingEdits) {
+    // Rejecting an edit: clear staged edits, keep the live listing intact
+    await prisma.discoverBooksSubmission.update({
+      where: { id },
+      data: {
+        pendingEdits: null,
+        pendingCoverImageData: null,
+        rejectionNote: rejectionNote ?? null,
+      },
+    });
+  } else {
+    // Rejecting a new submission
+    await prisma.discoverBooksSubmission.update({
+      where: { id },
+      data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
+    });
+  }
+
   revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
+  revalidatePath("/books");
 }
 
 export async function dismissDiscoverBooksSubmission(id: string): Promise<void> {
@@ -175,6 +288,5 @@ export async function likeDiscoverBooks(
   }
 
   const count = await prisma.discoverBooksLike.count({ where: { submissionId } });
-  const liked = true;
-  return { liked, count };
+  return { liked: true, count };
 }
