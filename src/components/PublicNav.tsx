@@ -59,23 +59,26 @@ export default function PublicNav() {
             padding: 0.15rem 0.32rem !important;
           }
 
-          /* Row 2 */
+          /* Row 2 — all items same small size, single row no wrapping */
           .pub-nav-row2 {
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            flex-wrap: wrap !important;
+            flex-wrap: nowrap !important;
             gap: 0.1rem !important;
             padding: 0.2rem 0 0.25rem !important;
           }
-          .pub-nav-row2 .pub-cta-green {
-            font-size: 0.74rem !important;
-            padding: 0.18rem 0.55rem !important;
+          /* Target Write With Us link and Admin link */
+          .pub-nav-row2 .pub-cta-green,
+          .pub-nav-row2 .pub-nav-admin {
+            font-size: 0.62rem !important;
+            padding: 0.14rem 0.38rem !important;
             margin-left: 0 !important;
           }
-          .pub-nav-admin {
+          /* Target MailingListWidget and FeedbackPopup trigger buttons (direct children via fragment) */
+          .pub-nav-row2 > button {
             font-size: 0.62rem !important;
-            margin-left: 0.2rem !important;
+            padding: 0.14rem 0.38rem !important;
           }
         }
       `}</style>

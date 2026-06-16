@@ -164,15 +164,43 @@ export default function AdminNav({
       </div>
 
       {/* Nav links bar */}
+      <style>{`
+        .admin-nav-bar {
+          padding: 0 2rem;
+          display: flex;
+          align-items: center;
+          gap: 0.15rem;
+          height: 38px;
+          border-top: 1px solid var(--color-border);
+        }
+        .admin-mobile-notice {
+          display: none;
+        }
+        @media (max-width: 1023px) {
+          .admin-nav-bar {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding: 0 1rem;
+          }
+          .admin-nav-bar::-webkit-scrollbar {
+            display: none;
+          }
+          .admin-mobile-notice {
+            display: block;
+            text-align: center;
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            color: var(--color-ink-faint);
+            letter-spacing: 0.03em;
+            padding: 0.3rem 1rem 0.2rem;
+            border-top: 1px solid var(--color-border);
+          }
+        }
+      `}</style>
       <nav
-        style={{
-          padding: "0 2rem",
-          display: "flex",
-          alignItems: "center",
-          gap: "0.15rem",
-          height: "38px",
-          borderTop: "1px solid var(--color-border)",
-        }}
+        className="admin-nav-bar"
         aria-label="Admin navigation"
       >
         {NAV_LINKS.filter(({ superAdminOnly }) => !superAdminOnly || isSuperAdmin).map(({ href, label }) => {
@@ -191,6 +219,7 @@ export default function AdminNav({
                 background: active ? "rgba(201,168,76,0.08)" : "transparent",
                 transition: "color 0.15s, background 0.15s",
                 whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {label}
@@ -198,6 +227,7 @@ export default function AdminNav({
           );
         })}
       </nav>
+      <p className="admin-mobile-notice">WriteWright is best experienced on a desktop or laptop.</p>
     </header>
   );
 }
