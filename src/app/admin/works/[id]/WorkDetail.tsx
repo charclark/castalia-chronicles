@@ -7,11 +7,10 @@ import {
   renameWork,
   setCoverImage,
   deleteWork,
-  publishWork,
-  unpublishWork,
   saveWorkDescription,
   saveBuyLinks,
 } from "@/app/actions/works";
+import FreeReadSubmitForm from "./FreeReadSubmitForm";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -33,6 +32,21 @@ type WorkMeta = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+type ChapterItem = { id: string; title: string; order: number };
+
+type FreeReadSubmission = {
+  id: string;
+  submissionType: string;
+  selectedChapterIds: string | null;
+  title: string;
+  description: string;
+  contentRating: string;
+  coverBgIndex: number | null;
+  hasCoverImage: boolean;
+  status: string;
+  submittedAt: string;
+} | null;
 
 type ImageOption = { id: string; label: string; category: string };
 
@@ -107,267 +121,104 @@ function ActionButton({
   );
 }
 
-// ── Publishing section ────────────────────────────────────────────────────────
+// ── Publishing options (two-card layout) ─────────────────────────────────────
 
-function PublishingSection({ work }: { work: WorkMeta }) {
-  const isPublished = work.status === "published";
-  const [publishMode, setPublishMode] = useState<"whole" | "snippet">("whole");
-  const [snippetText, setSnippetText] = useState(work.snippet ?? "");
-  const [error, setError] = useState("");
-  const [publishPending, startPublish] = useTransition();
-  const [unpublishPending, startUnpublish] = useTransition();
+function PublishingSection({
+  work,
+  chapters,
+  freeReadSubmission,
+}: {
+  work: WorkMeta;
+  chapters: ChapterItem[];
+  freeReadSubmission: FreeReadSubmission;
+}) {
+  const [openPanel, setOpenPanel] = useState<"startReading" | "discoverBooks" | null>(null);
 
-  function handlePublish() {
-    // Snippet must come from either the textarea or a previously saved snippet
-    if (publishMode === "snippet" && !snippetText.trim() && !work.snippet) {
-      setError("Enter snippet text, or open the editor, select text, and click 'Set as Snippet'.");
-      return;
-    }
-    setError("");
-    if (
-      !window.confirm(
-        `Are you sure you want to publish "${work.title}" for others to read?\n\n` +
-          (publishMode === "whole"
-            ? "The full work will be visible publicly."
-            : "Your chosen snippet/teaser will be visible publicly.")
-      )
-    )
-      return;
-
-    startPublish(async () => {
-      const result = await publishWork(
-        work.id,
-        publishMode,
-        // Pass textarea text if edited; server will fall back to saved snippet if empty
-        publishMode === "snippet" ? snippetText : undefined
-      );
-      if (result?.error) setError(result.error);
-    });
-  }
-
-  function handleUnpublish() {
-    if (
-      !window.confirm(
-        `Unpublish "${work.title}"?\n\nIt will no longer be visible to readers.`
-      )
-    )
-      return;
-    startUnpublish(async () => {
-      const result = await unpublishWork(work.id);
-      if (result?.error) setError(result.error);
-    });
-  }
+  const card = (
+    active: boolean,
+    label: string,
+    title: string,
+    description: string,
+    onClick: () => void
+  ) => (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.35rem",
+        background: active ? "rgba(201,168,76,0.06)" : "var(--color-bg-elevated)",
+        border: `1px solid ${active ? "var(--color-gold-dim)" : "var(--color-border)"}`,
+        borderRadius: "4px", padding: "1rem 1.25rem",
+        cursor: "pointer", textAlign: "left", width: "100%",
+        transition: "border-color 0.15s, background 0.15s",
+      }}
+    >
+      <span style={{
+        fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
+        textTransform: "uppercase", color: active ? "var(--color-gold)" : "var(--color-ink-faint)",
+      }}>
+        {label}
+      </span>
+      <span style={{
+        fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em",
+        color: active ? "var(--color-gold)" : "var(--color-ink)",
+      }}>
+        {title}
+      </span>
+      <span style={{
+        fontFamily: "var(--font-body)", fontSize: "0.78rem",
+        color: "var(--color-ink-faint)", lineHeight: 1.5,
+      }}>
+        {description}
+      </span>
+    </button>
+  );
 
   return (
-    <div>
-      <p style={sectionLabel}>Publishing</p>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <p style={sectionLabel}>Publish This Work</p>
 
-      {isPublished ? (
-        /* ── Published state ── */
-        <div>
-          <div
-            style={{
-              background: "rgba(201,168,76,0.06)",
-              border: "1px solid var(--color-gold-dim)",
-              borderLeft: "3px solid var(--color-gold)",
-              borderRadius: "4px",
-              padding: "1rem 1.25rem",
-              marginBottom: "1rem",
-            }}
-          >
-            <p style={{
-              fontFamily: "var(--font-body)", fontSize: "0.82rem",
-              color: "var(--color-gold)", marginBottom: "0.2rem",
-            }}>
-              {work.publishMode === "snippet" ? "Snippet published" : "Full work published"}
-              {work.publishedAt && (
-                <span style={{ color: "var(--color-ink-faint)", marginLeft: "0.5rem" }}>
-                  · {work.publishedAt.toLocaleDateString("en-US", {
-                    month: "short", day: "numeric", year: "numeric",
-                  })}
-                </span>
-              )}
-            </p>
-            <p style={{
-              fontFamily: "var(--font-body)", fontSize: "0.82rem",
-              color: "var(--color-ink-muted)",
-            }}>
-              {work.openCount.toLocaleString()}{" "}
-              {work.openCount === 1 ? "read" : "reads"}
-            </p>
-            {work.publishMode === "snippet" && work.snippet && (
-              <details style={{ marginTop: "0.6rem" }}>
-                <summary style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.75rem",
-                  color: "var(--color-ink-faint)", cursor: "pointer", letterSpacing: "0.04em",
-                }}>
-                  View published snippet
-                </summary>
-                <div
-                  style={{
-                    marginTop: "0.5rem", padding: "0.75rem",
-                    background: "var(--color-bg)", borderRadius: "3px",
-                    fontFamily: "var(--font-body)", fontSize: "0.85rem",
-                    color: "var(--color-ink-muted)", lineHeight: 1.7,
-                    maxHeight: "160px", overflowY: "auto",
-                    whiteSpace: "pre-wrap", wordBreak: "break-word",
-                  }}
-                >
-                  {work.snippet}
-                </div>
-              </details>
-            )}
-          </div>
+      {/* Option 1 — Start Reading */}
+      {card(
+        openPanel === "startReading",
+        "Option 1",
+        "Submit to Start Reading — Free for Everyone",
+        "Share your work with readers for free. Choose specific chapters, a selection of chapters, or your full work. Readers can enjoy it directly on WriteWright at no cost. All submissions require approval before going live.",
+        () => setOpenPanel(openPanel === "startReading" ? null : "startReading")
+      )}
 
-          {error && (
-            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.85rem", color: "#d4848e", marginBottom: "0.75rem" }}>
-              {error}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={handleUnpublish}
-            disabled={unpublishPending}
-            style={{
-              background: "transparent",
-              border: "1px solid var(--color-border-light)",
-              borderRadius: "3px", padding: "0.55rem 1.1rem",
-              color: "var(--color-ink-muted)",
-              fontFamily: "var(--font-body)", fontSize: "0.88rem",
-              cursor: unpublishPending ? "default" : "pointer",
-              opacity: unpublishPending ? 0.6 : 1,
-            }}
-          >
-            {unpublishPending ? "Unpublishing…" : "Unpublish — make private again"}
-          </button>
+      {openPanel === "startReading" && (
+        <div style={{
+          marginLeft: "1rem", paddingLeft: "1rem",
+          borderLeft: "2px solid var(--color-gold-dim)",
+        }}>
+          <FreeReadSubmitForm
+            workId={work.id}
+            workTitle={work.title}
+            chapters={chapters}
+            existingSubmission={freeReadSubmission}
+          />
         </div>
-      ) : (
-        /* ── Unpublished state ── */
-        <div
-          style={{
-            background: "var(--color-bg-elevated)",
-            border: "1px solid var(--color-border)",
-            borderRadius: "4px",
-            padding: "1.25rem 1.5rem",
-          }}
-        >
-          {/* Mode selector */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginBottom: "1.25rem" }}>
-            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name={`pubmode-${work.id}`}
-                value="whole"
-                checked={publishMode === "whole"}
-                onChange={() => setPublishMode("whole")}
-                style={{ marginTop: "0.2rem", accentColor: "var(--color-gold)", flexShrink: 0 }}
-              />
-              <span>
-                <span style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--color-ink)",
-                  display: "block",
-                }}>
-                  Publish the full work — Free Read
-                </span>
-                <span style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)",
-                  fontStyle: "italic",
-                }}>
-                  The entire written content is readable online on the Free Read page.
-                </span>
-              </span>
-            </label>
+      )}
 
-            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.6rem", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name={`pubmode-${work.id}`}
-                value="snippet"
-                checked={publishMode === "snippet"}
-                onChange={() => setPublishMode("snippet")}
-                style={{ marginTop: "0.2rem", accentColor: "var(--color-gold)", flexShrink: 0 }}
-              />
-              <span>
-                <span style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.92rem", color: "var(--color-ink)",
-                  display: "block",
-                }}>
-                  Publish a snippet / teaser only — Published Books
-                </span>
-                <span style={{
-                  fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)",
-                  fontStyle: "italic",
-                }}>
-                  Only your chosen excerpt is shown publicly. The full content stays private.
-                </span>
-              </span>
-            </label>
-          </div>
+      {/* Option 2 — Discover Books */}
+      {card(
+        openPanel === "discoverBooks",
+        "Option 2",
+        "List on Discover Books — Sell Your Work",
+        "List your published book for sale. Share your cover, a short description, and a link where readers can purchase your work. No written content is shared — this is a storefront listing only.",
+        () => setOpenPanel(openPanel === "discoverBooks" ? null : "discoverBooks")
+      )}
 
-          {/* Snippet textarea — shown only when snippet mode selected */}
-          {publishMode === "snippet" && (
-            <div style={{ ...fieldRow, marginBottom: "1.25rem" }}>
-              <label style={fieldLabel}>
-                Snippet text
-                {work.snippet && (
-                  <span style={{
-                    textTransform: "none", fontStyle: "italic", letterSpacing: 0,
-                    fontSize: "0.72rem", color: "var(--color-gold)", marginLeft: "0.5rem",
-                  }}>
-                    — saved from editor ({work.snippet.length} chars)
-                  </span>
-                )}
-              </label>
-              <textarea
-                value={snippetText}
-                onChange={(e) => setSnippetText(e.target.value)}
-                placeholder="Select text in the editor and click 'Set as Snippet', or paste directly here…"
-                rows={8}
-                style={{
-                  background: "var(--color-bg-surface)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "3px", padding: "0.7rem 0.9rem",
-                  color: "var(--color-ink)",
-                  fontFamily: "var(--font-body)", fontSize: "0.95rem",
-                  lineHeight: 1.75, outline: "none", width: "100%",
-                  resize: "vertical",
-                }}
-              />
-              <p style={{
-                fontFamily: "var(--font-body)", fontSize: "0.72rem",
-                color: "var(--color-ink-faint)", fontStyle: "italic",
-              }}>
-                In the editor, select text then click "Set as Snippet" to save it here automatically.
-                Or paste/type directly above.
-              </p>
-            </div>
-          )}
-
-          {error && (
-            <p style={{
-              fontFamily: "var(--font-body)", fontSize: "0.85rem",
-              color: "#d4848e", marginBottom: "0.75rem",
-            }}>
-              {error}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={publishPending}
-            style={{
-              background: publishPending ? "var(--color-border)" : "var(--color-gold)",
-              border: "none", borderRadius: "3px",
-              padding: "0.65rem 1.5rem",
-              color: publishPending ? "var(--color-ink-muted)" : "var(--color-bg)",
-              fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.06em",
-              cursor: publishPending ? "default" : "pointer",
-            }}
-          >
-            {publishPending ? "Publishing…" : "Publish →"}
-          </button>
+      {openPanel === "discoverBooks" && (
+        <div style={{
+          marginLeft: "1rem", paddingLeft: "1rem",
+          borderLeft: "2px solid var(--color-border-light)",
+          display: "flex", flexDirection: "column", gap: "1.75rem",
+        }}>
+          <DescriptionEditor work={work} />
+          <div style={{ height: "1px", background: "var(--color-border)" }} />
+          <BuyLinksEditor work={work} />
         </div>
       )}
     </div>
@@ -575,11 +426,15 @@ export default function WorkDetail({
   availableImages,
   isSuperAdmin,
   canEdit = true,
+  chapters,
+  freeReadSubmission,
 }: {
   work: WorkMeta;
   availableImages: ImageOption[];
   isSuperAdmin: boolean;
   canEdit?: boolean;
+  chapters: ChapterItem[];
+  freeReadSubmission: FreeReadSubmission;
 }) {
   const router = useRouter();
   const [renameState, renameAction, renamePending] = useActionState(renameWork, null);
@@ -760,10 +615,14 @@ export default function WorkDetail({
             </button>
           </form>
 
-          {/* ── Publishing section ── */}
+          {/* ── Publishing options ── */}
           <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
           <div style={{ marginBottom: "2rem" }}>
-            <PublishingSection work={work} />
+            <PublishingSection
+              work={work}
+              chapters={chapters}
+              freeReadSubmission={freeReadSubmission}
+            />
           </div>
 
           {/* ── Cover image selector (books only) ── */}
@@ -825,20 +684,6 @@ export default function WorkDetail({
                   )}
                 </div>
               </form>
-            </>
-          )}
-
-          {/* ── Description & Buy Links (books only) ── */}
-          {isBook && (
-            <>
-              <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-              <div style={{ marginBottom: "2rem" }}>
-                <DescriptionEditor work={work} />
-              </div>
-              <div style={{ height: "1px", background: "var(--color-border)", marginBottom: "2rem" }} />
-              <div style={{ marginBottom: "2rem" }}>
-                <BuyLinksEditor work={work} />
-              </div>
             </>
           )}
 

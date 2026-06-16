@@ -3,24 +3,49 @@ import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
 export default async function FreeReadPage() {
-  let works: { id: string; title: string; type: string; content: string | null; publishedAt: Date | null }[] = [];
+  let submissions: {
+    id: string;
+    title: string;
+    description: string;
+    contentRating: string;
+    coverBgIndex: number | null;
+    hasCoverImage: boolean;
+    publishedAt: Date | null;
+    likeCount: number;
+    user: { username: string };
+    work: { type: string };
+  }[] = [];
+
   try {
-    works = await prisma.work.findMany({
-      where: { status: "published", publishMode: "whole" },
+    const raw = await prisma.freeReadSubmission.findMany({
+      where: { status: "approved" },
       orderBy: { publishedAt: "desc" },
       select: {
         id: true,
         title: true,
-        type: true,
-        content: true,
+        description: true,
+        contentRating: true,
+        coverBgIndex: true,
+        coverImageData: true,
         publishedAt: true,
+        user: { select: { username: true } },
+        work: { select: { type: true } },
+        _count: { select: { likes: true } },
       },
     });
+    submissions = raw.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description,
+      contentRating: s.contentRating,
+      coverBgIndex: s.coverBgIndex,
+      hasCoverImage: !!s.coverImageData,
+      publishedAt: s.publishedAt,
+      likeCount: s._count.likes,
+      user: s.user,
+      work: s.work,
+    }));
   } catch {
     // DB unavailable in local dev — render empty state
   }
@@ -33,7 +58,7 @@ export default async function FreeReadPage() {
         padding: "clamp(3rem, 8vw, 6rem) 1.5rem",
       }}
     >
-      <div style={{ maxWidth: "860px", margin: "0 auto" }}>
+      <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
         <Link
           href="/"
           style={{
@@ -50,7 +75,7 @@ export default async function FreeReadPage() {
         >
           ← Home
         </Link>
-        {/* Page heading */}
+
         <div style={{ marginBottom: "clamp(2.5rem, 6vw, 4rem)", textAlign: "center" }}>
           <p
             style={{
@@ -97,11 +122,11 @@ export default async function FreeReadPage() {
               lineHeight: 1.75,
             }}
           >
-            Full works made freely available. Read at your leisure — no sign-up required.
+            Full works and excerpts made freely available. Read at your leisure — no sign-up required.
           </p>
         </div>
 
-        {works.length === 0 ? (
+        {submissions.length === 0 ? (
           <p
             style={{
               fontFamily: "var(--font-body)",
@@ -115,17 +140,30 @@ export default async function FreeReadPage() {
             No works available yet. Check back soon.
           </p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-            {works.map((work) => {
-              const preview = work.content
-                ? stripHtml(work.content).slice(0, 220) + (stripHtml(work.content).length > 220 ? "…" : "")
-                : "";
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gap: "1.75rem",
+            }}
+          >
+            {submissions.map((sub) => {
+              const coverSrc = sub.hasCoverImage
+                ? `/api/free-read-cover/${sub.id}`
+                : sub.coverBgIndex
+                ? `/cover-backgrounds/cover-bg-${sub.coverBgIndex}.jpg`
+                : null;
+
+              const desc =
+                sub.description.length > 150
+                  ? sub.description.slice(0, 150).trimEnd() + "…"
+                  : sub.description;
 
               return (
                 <Link
-                  key={work.id}
-                  href={`/free-read/${work.id}`}
-                  style={{ textDecoration: "none" }}
+                  key={sub.id}
+                  href={`/free-read/${sub.id}`}
+                  style={{ textDecoration: "none", display: "block" }}
                 >
                   <article
                     className="hover-border-light"
@@ -133,89 +171,120 @@ export default async function FreeReadPage() {
                       background: "var(--color-bg-surface)",
                       border: "1px solid var(--color-border)",
                       borderRadius: "4px",
-                      padding: "clamp(1.25rem, 3vw, 2rem)",
+                      overflow: "hidden",
                       transition: "border-color 0.2s",
                       cursor: "pointer",
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
                     }}
                   >
+                    {/* Cover */}
                     <div
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.6rem",
-                        marginBottom: "0.6rem",
-                        flexWrap: "wrap",
+                        width: "100%",
+                        aspectRatio: "2/3",
+                        background: "var(--color-bg-elevated)",
+                        overflow: "hidden",
+                        flexShrink: 0,
                       }}
                     >
-                      <span
-                        style={{
-                          fontFamily: "var(--font-body)",
-                          fontSize: "0.65rem",
-                          letterSpacing: "0.12em",
-                          textTransform: "uppercase",
-                          color: "var(--color-ink-muted)",
-                          border: "1px solid var(--color-border)",
-                          borderRadius: "2px",
-                          padding: "0.1rem 0.45rem",
-                        }}
-                      >
-                        {work.type === "book" ? "Novel" : "Short Story"}
-                      </span>
-                      {work.publishedAt && (
-                        <span
-                          style={{
-                            fontFamily: "var(--font-body)",
-                            fontSize: "0.75rem",
-                            color: "var(--color-ink-faint)",
-                            fontStyle: "italic",
-                          }}
-                        >
-                          {work.publishedAt.toLocaleDateString("en-US", {
-                            month: "short",
-                            year: "numeric",
-                          })}
-                        </span>
+                      {coverSrc ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={coverSrc}
+                          alt=""
+                          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                        />
+                      ) : (
+                        <div style={{ width: "100%", height: "100%", background: "linear-gradient(160deg, #1a1015 0%, #0d0810 100%)" }} />
                       )}
                     </div>
 
-                    <h2
-                      style={{
-                        fontFamily: "var(--font-heading)",
-                        fontSize: "clamp(1.4rem, 3vw, 1.9rem)",
-                        fontWeight: 400,
-                        color: "var(--color-ink)",
-                        letterSpacing: "0.03em",
-                        marginBottom: preview ? "0.75rem" : 0,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {work.title}
-                    </h2>
+                    {/* Info */}
+                    <div style={{ padding: "1rem", flex: 1, display: "flex", flexDirection: "column", gap: "0.4rem" }}>
+                      {/* Type + Rating badges */}
+                      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-body)",
+                            fontSize: "0.6rem",
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            color: "var(--color-ink-faint)",
+                            border: "1px solid var(--color-border)",
+                            borderRadius: "2px",
+                            padding: "0.08rem 0.4rem",
+                          }}
+                        >
+                          {sub.work.type === "book" ? "Novel" : "Short Story"}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-body)",
+                            fontSize: "0.6rem",
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            color: "var(--color-ink-faint)",
+                            border: "1px solid var(--color-border)",
+                            borderRadius: "2px",
+                            padding: "0.08rem 0.4rem",
+                          }}
+                        >
+                          {sub.contentRating}
+                        </span>
+                      </div>
 
-                    {preview && (
+                      <h2
+                        style={{
+                          fontFamily: "var(--font-heading)",
+                          fontSize: "1.1rem",
+                          fontWeight: 400,
+                          color: "var(--color-ink)",
+                          lineHeight: 1.25,
+                          margin: 0,
+                        }}
+                      >
+                        {sub.title}
+                      </h2>
+
                       <p
                         style={{
                           fontFamily: "var(--font-body)",
-                          fontSize: "clamp(0.9rem, 1.6vw, 1rem)",
-                          color: "var(--color-ink-muted)",
-                          lineHeight: 1.75,
-                          marginBottom: "1rem",
+                          fontSize: "0.75rem",
+                          color: "var(--color-ink-faint)",
+                          margin: 0,
                         }}
                       >
-                        {preview}
+                        @{sub.user.username}
                       </p>
-                    )}
 
-                    <span
-                      style={{
-                        fontFamily: "var(--font-heading)",
-                        fontSize: "0.95rem",
-                        letterSpacing: "0.06em",
-                        color: "var(--color-gold)",
-                      }}
-                    >
-                      Read →
-                    </span>
+                      <p
+                        style={{
+                          fontFamily: "var(--font-body)",
+                          fontSize: "0.82rem",
+                          color: "var(--color-ink-muted)",
+                          lineHeight: 1.65,
+                          margin: 0,
+                          flex: 1,
+                        }}
+                      >
+                        {desc}
+                      </p>
+
+                      {sub.likeCount > 0 && (
+                        <p
+                          style={{
+                            fontFamily: "var(--font-body)",
+                            fontSize: "0.72rem",
+                            color: "var(--color-ink-faint)",
+                            margin: 0,
+                          }}
+                        >
+                          Liked by {sub.likeCount.toLocaleString()} reader{sub.likeCount !== 1 ? "s" : ""}
+                        </p>
+                      )}
+                    </div>
                   </article>
                 </Link>
               );

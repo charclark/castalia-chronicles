@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import OpenCountIncrementer from "./OpenCountIncrementer";
+import LikeButton from "./LikeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +12,63 @@ export default async function ReaderPage({
 }) {
   const { id } = await params;
 
-  const work = await prisma.work.findFirst({
-    where: { id, status: "published", publishMode: "whole" },
-    select: { id: true, title: true, type: true, content: true, publishedAt: true },
+  const sub = await prisma.freeReadSubmission.findFirst({
+    where: { id, status: "approved" },
+    select: {
+      id: true,
+      submissionType: true,
+      selectedChapterIds: true,
+      title: true,
+      description: true,
+      contentRating: true,
+      coverBgIndex: true,
+      coverImageData: true,
+      publishedAt: true,
+      user: { select: { username: true } },
+      work: {
+        select: {
+          id: true,
+          type: true,
+          content: true,
+          chapters: {
+            orderBy: { order: "asc" },
+            select: { id: true, title: true, content: true, order: true },
+          },
+        },
+      },
+      _count: { select: { likes: true } },
+    },
   });
 
-  if (!work) notFound();
+  if (!sub) notFound();
+
+  const hasCoverImage = !!sub.coverImageData;
+  const coverSrc = hasCoverImage
+    ? `/api/free-read-cover/${sub.id}`
+    : sub.coverBgIndex
+    ? `/cover-backgrounds/cover-bg-${sub.coverBgIndex}.jpg`
+    : null;
+
+  // Build content sections
+  type ContentSection = { title: string | null; html: string };
+  const sections: ContentSection[] = [];
+
+  if (sub.submissionType === "full") {
+    if (sub.work.content) {
+      sections.push({ title: null, html: sub.work.content });
+    }
+  } else {
+    // chapters submission
+    let ids: string[] = [];
+    try { ids = JSON.parse(sub.selectedChapterIds ?? "[]") as string[]; } catch { /* ignore */ }
+    const idSet = new Set(ids);
+    const ordered = sub.work.chapters
+      .filter((c) => idSet.has(c.id))
+      .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+    for (const ch of ordered) {
+      sections.push({ title: ch.title, html: ch.content ?? "" });
+    }
+  }
 
   return (
     <main
@@ -27,48 +78,58 @@ export default async function ReaderPage({
         padding: "clamp(2.5rem, 6vw, 5rem) 1.5rem",
       }}
     >
-      <OpenCountIncrementer workId={id} />
-
       <article style={{ maxWidth: "680px", margin: "0 auto" }}>
-        {/* Back links */}
-        <div style={{ display: "flex", gap: "1.5rem", marginBottom: "2rem" }}>
-          <Link
-            href="/"
+        {/* Back link */}
+        <Link
+          href="/free-read"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.35rem",
+            fontFamily: "var(--font-body)",
+            fontSize: "0.85rem",
+            color: "var(--color-ink-faint)",
+            textDecoration: "none",
+            marginBottom: "2.5rem",
+          }}
+        >
+          ← Back to Stories
+        </Link>
+
+        {/* Cover */}
+        {coverSrc && (
+          <div
             style={{
-              fontFamily: "var(--font-body)",
-              fontSize: "0.85rem",
-              color: "var(--color-ink-faint)",
-              textDecoration: "none",
+              width: "100%",
+              maxWidth: "260px",
+              margin: "0 auto 2.5rem",
+              borderRadius: "4px",
+              overflow: "hidden",
+              border: "1px solid var(--color-border)",
             }}
           >
-            ← Home
-          </Link>
-          <Link
-            href="/free-read"
-            style={{
-              fontFamily: "var(--font-body)",
-              fontSize: "0.85rem",
-              color: "var(--color-ink-faint)",
-              textDecoration: "none",
-            }}
-          >
-            ← Start Reading
-          </Link>
-        </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={coverSrc}
+              alt=""
+              style={{ width: "100%", display: "block", aspectRatio: "2/3", objectFit: "cover" }}
+            />
+          </div>
+        )}
 
         {/* Title block */}
-        <header style={{ marginBottom: "3rem" }}>
+        <header style={{ marginBottom: "2.5rem", textAlign: coverSrc ? "center" : "left" }}>
           <p
             style={{
               fontFamily: "var(--font-body)",
-              fontSize: "0.72rem",
+              fontSize: "0.68rem",
               letterSpacing: "0.18em",
               textTransform: "uppercase",
-              color: "var(--color-gold)",
-              marginBottom: "0.6rem",
+              color: "var(--color-ink-faint)",
+              marginBottom: "0.4rem",
             }}
           >
-            {work.type === "book" ? "Novel" : "Short Story"}
+            {sub.work.type === "book" ? "Novel" : "Short Story"} · {sub.contentRating}
           </p>
           <h1
             style={{
@@ -78,46 +139,78 @@ export default async function ReaderPage({
               color: "var(--color-ink)",
               letterSpacing: "0.04em",
               lineHeight: 1.15,
-              marginBottom: "1rem",
+              marginBottom: "0.5rem",
             }}
           >
-            {work.title}
+            {sub.title}
           </h1>
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.82rem",
+              color: "var(--color-ink-faint)",
+              marginBottom: "1.25rem",
+            }}
+          >
+            by @{sub.user.username}
+          </p>
           <div
             aria-hidden
             style={{
               width: "48px",
               height: "1px",
               background: "var(--color-gold-dim)",
+              margin: coverSrc ? "0 auto 1.25rem" : "0 0 1.25rem",
             }}
           />
-          {work.publishedAt && (
-            <p
-              style={{
-                fontFamily: "var(--font-body)",
-                fontSize: "0.78rem",
-                color: "var(--color-ink-faint)",
-                marginTop: "0.75rem",
-                fontStyle: "italic",
-              }}
-            >
-              Published{" "}
-              {work.publishedAt.toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </p>
-          )}
+          <p
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "clamp(0.9rem, 1.6vw, 1rem)",
+              fontStyle: "italic",
+              color: "var(--color-ink-muted)",
+              lineHeight: 1.75,
+            }}
+          >
+            {sub.description}
+          </p>
         </header>
 
+        {/* Like button */}
+        <div style={{ marginBottom: "3rem" }}>
+          <LikeButton submissionId={sub.id} initialCount={sub._count.likes} />
+        </div>
+
         {/* Content */}
-        {work.content ? (
-          <div className="tiptap-writing-area">
-            <div
-              className="tiptap"
-              dangerouslySetInnerHTML={{ __html: work.content }}
-            />
+        {sections.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "3rem" }}>
+            {sections.map((sec, i) => (
+              <section key={i}>
+                {sec.title && (
+                  <h2
+                    style={{
+                      fontFamily: "var(--font-heading)",
+                      fontSize: "1.4rem",
+                      fontWeight: 400,
+                      color: "var(--color-ink)",
+                      marginBottom: "1.5rem",
+                      letterSpacing: "0.04em",
+                    }}
+                  >
+                    {sec.title}
+                  </h2>
+                )}
+                {sec.html ? (
+                  <div className="tiptap-writing-area">
+                    <div className="tiptap" dangerouslySetInnerHTML={{ __html: sec.html }} />
+                  </div>
+                ) : (
+                  <p style={{ fontFamily: "var(--font-body)", fontStyle: "italic", color: "var(--color-ink-faint)" }}>
+                    Content coming soon.
+                  </p>
+                )}
+              </section>
+            ))}
           </div>
         ) : (
           <p
@@ -151,9 +244,7 @@ export default async function ReaderPage({
               background: "linear-gradient(to right, transparent, var(--color-border-light))",
             }}
           />
-          <span style={{ color: "var(--color-gold)", fontSize: "0.65rem", opacity: 0.8 }}>
-            ✦
-          </span>
+          <span style={{ color: "var(--color-gold)", fontSize: "0.65rem", opacity: 0.8 }}>✦</span>
           <span
             style={{
               display: "block",
@@ -164,17 +255,21 @@ export default async function ReaderPage({
           />
         </div>
 
-        <Link
-          href="/free-read"
-          style={{
-            fontFamily: "var(--font-body)",
-            fontSize: "0.88rem",
-            color: "var(--color-ink-faint)",
-            textDecoration: "none",
-          }}
-        >
-          ← Start Reading
-        </Link>
+        {/* Bottom like + back */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+          <Link
+            href="/free-read"
+            style={{
+              fontFamily: "var(--font-body)",
+              fontSize: "0.88rem",
+              color: "var(--color-ink-faint)",
+              textDecoration: "none",
+            }}
+          >
+            ← Back to Stories
+          </Link>
+          <LikeButton submissionId={sub.id} initialCount={sub._count.likes} />
+        </div>
       </article>
     </main>
   );

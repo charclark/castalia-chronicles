@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { approveAuthorProfile, rejectAuthorProfile } from "@/app/actions/author-profiles";
 import { approveJoinRequest, rejectJoinRequest } from "@/app/actions/join-requests";
+import { approveFreeReadSubmission, rejectFreeReadSubmission } from "@/app/actions/free-read-submissions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -258,6 +259,116 @@ function JoinRequestCard({ req }: { req: JoinRequest }) {
   );
 }
 
+// ── Free Read Submission Card ─────────────────────────────────────────────────
+
+type FreeReadSub = {
+  id: string;
+  submissionType: string;
+  selectedChapterIds: string | null;
+  title: string;
+  description: string;
+  contentRating: string;
+  coverBgIndex: number | null;
+  hasCoverImage: boolean;
+  status: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+  work: { id: string; title: string; type: string };
+  user: { id: string; username: string };
+  chapterMap: Record<string, string>;
+};
+
+function FreeReadSubCard({ sub }: { sub: FreeReadSub }) {
+  const [status, setStatus] = useState(sub.status);
+  const [pending, startTransition] = useTransition();
+  const [expanded, setExpanded] = useState(sub.status === "pending");
+
+  const submitted = new Date(sub.submittedAt).toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  });
+
+  const chapterTitles: string[] = (() => {
+    if (sub.submissionType !== "chapters" || !sub.selectedChapterIds) return [];
+    try {
+      const ids = JSON.parse(sub.selectedChapterIds) as string[];
+      return ids.map((id) => sub.chapterMap[id] ?? id);
+    } catch { return []; }
+  })();
+
+  const coverSrc = sub.hasCoverImage
+    ? `/api/free-read-cover/${sub.id}`
+    : sub.coverBgIndex
+    ? `/cover-backgrounds/cover-bg-${sub.coverBgIndex}.jpg`
+    : null;
+
+  return (
+    <div style={{ ...cardStyle, opacity: pending ? 0.6 : 1, transition: "opacity 0.15s" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.6rem", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem", color: "var(--color-ink)", marginBottom: "0.15rem" }}>
+            {sub.title}
+          </p>
+          <p style={metaText}>
+            @{sub.user.username} · {sub.work.title} ({sub.work.type}) · {submitted}
+          </p>
+          <p style={{ ...metaText, marginTop: "0.15rem" }}>
+            <strong style={{ color: "var(--color-ink-muted)" }}>Rating:</strong> {sub.contentRating}
+            {" · "}
+            <strong style={{ color: "var(--color-ink-muted)" }}>Content:</strong>{" "}
+            {sub.submissionType === "full" ? "Full work" : `${chapterTitles.length} chapter(s)`}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <StatusBadge status={status} />
+          <button
+            type="button"
+            onClick={() => setExpanded((x) => !x)}
+            style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.2rem 0.6rem", color: "var(--color-ink-faint)", cursor: "pointer" }}
+          >
+            {expanded ? "Collapse" : "Details"}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+            {coverSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverSrc} alt="Cover" style={{ width: "72px", height: "100px", objectFit: "cover", borderRadius: "3px", border: "1px solid var(--color-border)", flexShrink: 0 }} />
+            )}
+            <div style={{ flex: 1 }}>
+              <p style={metaLabel}>Description</p>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-muted)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{sub.description}</p>
+            </div>
+          </div>
+
+          {sub.submissionType === "chapters" && chapterTitles.length > 0 && (
+            <div>
+              <p style={metaLabel}>Selected Chapters</p>
+              <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+                {chapterTitles.map((t, i) => (
+                  <li key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-muted)" }}>{t}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <ApproveRejectButtons
+        status={status} pending={pending}
+        onApprove={() => startTransition(async () => { await approveFreeReadSubmission(sub.id); setStatus("approved"); })}
+        onReject={() => {
+          if (!window.confirm(`Reject "${sub.title}" by @${sub.user.username}?`)) return;
+          startTransition(async () => { await rejectFreeReadSubmission(sub.id); setStatus("rejected"); });
+        }}
+      />
+    </div>
+  );
+}
+
 // ── Section wrapper ───────────────────────────────────────────────────────────
 
 function CardSection<T extends { id: string; status: string }>({
@@ -310,12 +421,32 @@ function CardSection<T extends { id: string; status: string }>({
 export default function ApprovalsClient({
   profiles,
   joinRequests,
+  freeReadSubmissions,
 }: {
   profiles: Profile[];
   joinRequests: JoinRequest[];
+  freeReadSubmissions: FreeReadSub[];
 }) {
   return (
     <div>
+      {/* Start Reading Submissions */}
+      <div style={{ marginBottom: "3.5rem" }}>
+        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
+          Start Reading Submissions
+        </h3>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
+          Works submitted for the public Start Reading section.
+        </p>
+        <CardSection
+          emptyLabel="Start Reading submissions"
+          items={freeReadSubmissions}
+          renderCard={(s) => <FreeReadSubCard key={s.id} sub={s} />}
+        />
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: "1px", background: "var(--color-border-light)", marginBottom: "3.5rem" }} />
+
       {/* Join Requests */}
       <div style={{ marginBottom: "3.5rem" }}>
         <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>

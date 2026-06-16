@@ -5,6 +5,8 @@ import { getCanEditUniverse } from "@/lib/auth-utils";
 import { getCurrentUniverseId } from "@/lib/universe";
 import WorkDetail from "./WorkDetail";
 
+export const dynamic = "force-dynamic";
+
 export default async function WorkPage({
   params,
 }: {
@@ -36,21 +38,63 @@ export default async function WorkPage({
   });
   if (!work) notFound();
 
-  // For the cover image selector (books only) — fetch all images in universe
-  const images =
+  const [images, session, canEdit, chapters, rawSubmission] = await Promise.all([
     work.type === "book"
-      ? await prisma.image.findMany({
+      ? prisma.image.findMany({
           where: { universeId },
           orderBy: { createdAt: "desc" },
           select: { id: true, label: true, category: true },
         })
-      : [];
-
-  const [session, canEdit] = await Promise.all([
+      : Promise.resolve([]),
     getSession(),
     getCanEditUniverse(universeId),
+    prisma.chapter.findMany({
+      where: { workId: id },
+      orderBy: { order: "asc" },
+      select: { id: true, title: true, order: true },
+    }),
+    prisma.freeReadSubmission.findUnique({
+      where: { workId: id },
+      select: {
+        id: true,
+        submissionType: true,
+        selectedChapterIds: true,
+        title: true,
+        description: true,
+        contentRating: true,
+        coverBgIndex: true,
+        coverImageData: true,
+        status: true,
+        submittedAt: true,
+      },
+    }),
   ]);
+
   const isSuperAdmin = session?.isSuperAdmin ?? false;
 
-  return <WorkDetail work={work} availableImages={images} isSuperAdmin={isSuperAdmin} canEdit={canEdit} />;
+  const freeReadSubmission = rawSubmission
+    ? {
+        id: rawSubmission.id,
+        submissionType: rawSubmission.submissionType,
+        selectedChapterIds: rawSubmission.selectedChapterIds,
+        title: rawSubmission.title,
+        description: rawSubmission.description,
+        contentRating: rawSubmission.contentRating,
+        coverBgIndex: rawSubmission.coverBgIndex,
+        hasCoverImage: !!rawSubmission.coverImageData,
+        status: rawSubmission.status,
+        submittedAt: rawSubmission.submittedAt.toISOString(),
+      }
+    : null;
+
+  return (
+    <WorkDetail
+      work={work}
+      availableImages={images}
+      isSuperAdmin={isSuperAdmin}
+      canEdit={canEdit}
+      chapters={chapters}
+      freeReadSubmission={freeReadSubmission}
+    />
+  );
 }

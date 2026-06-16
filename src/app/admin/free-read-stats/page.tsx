@@ -15,17 +15,31 @@ export default async function FreeReadStatsPage() {
         universe: { createdByUserId: session?.userId ?? "" },
       };
 
-  const works = await prisma.work.findMany({
-    where,
-    orderBy: { openCount: "desc" },
-    select: {
-      id: true,
-      title: true,
-      type: true,
-      openCount: true,
-      publishedAt: true,
-    },
-  });
+  const [works, likedSubs] = await Promise.all([
+    prisma.work.findMany({
+      where,
+      orderBy: { openCount: "desc" },
+      select: {
+        id: true,
+        title: true,
+        type: true,
+        openCount: true,
+        publishedAt: true,
+      },
+    }),
+    isSuperAdmin
+      ? prisma.freeReadSubmission.findMany({
+          where: { status: "approved" },
+          orderBy: { title: "asc" },
+          select: {
+            id: true,
+            title: true,
+            user: { select: { username: true } },
+            _count: { select: { likes: true } },
+          },
+        })
+      : Promise.resolve([]),
+  ]);
 
   const maxCount = works[0]?.openCount ?? 0;
 
@@ -186,6 +200,43 @@ export default async function FreeReadStatsPage() {
             );
           })}
         </div>
+      )}
+      {isSuperAdmin && (
+        <>
+          <div style={{ height: "1px", background: "var(--color-border)", margin: "3.5rem 0" }} />
+          <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
+            Start Reading Likes
+          </h3>
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
+            Thumbs-up counts for approved Start Reading submissions, alphabetical.
+          </p>
+          {likedSubs.length === 0 ? (
+            <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", padding: "0.75rem 0" }}>
+              No approved Start Reading submissions yet.
+            </p>
+          ) : (
+            <div style={{ background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)", borderRadius: "4px", overflow: "hidden" }}>
+              {likedSubs.map((sub, i) => (
+                <div key={sub.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", padding: "0.9rem 1.5rem", borderBottom: i < likedSubs.length - 1 ? "1px solid var(--color-border)" : "none" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontFamily: "var(--font-heading)", fontSize: "1.05rem", color: "var(--color-ink)", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {sub.title}
+                    </span>
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", color: "var(--color-ink-faint)" }}>
+                      @{sub.user.username}
+                    </span>
+                  </div>
+                  <span style={{ fontFamily: "var(--font-heading)", fontSize: "1.3rem", color: "var(--color-ink-muted)", flexShrink: 0 }}>
+                    {sub._count.likes.toLocaleString()}
+                    <span style={{ fontFamily: "var(--font-body)", fontSize: "0.72rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-ink-faint)", marginLeft: "0.35rem" }}>
+                      likes
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

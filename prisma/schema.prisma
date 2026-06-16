@@ -23,12 +23,13 @@ model User {
   sessionVersion      Int              @default(1)
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
-  universeAccess    UniverseAccess[]
-  createdUniverses  Universe[]       @relation("UniverseCreator")
-  archivedUniverses Universe[]       @relation("UniverseArchiver")
-  workShares        WorkShare[]
-  feedbackShares    FeedbackShare[]
-  authorProfile     AuthorProfile?
+  universeAccess      UniverseAccess[]
+  createdUniverses    Universe[]       @relation("UniverseCreator")
+  archivedUniverses   Universe[]       @relation("UniverseArchiver")
+  workShares          WorkShare[]
+  feedbackShares      FeedbackShare[]
+  authorProfile       AuthorProfile?
+  freeReadSubmissions FreeReadSubmission[]
 }
 
 // --- Universe ---
@@ -393,9 +394,10 @@ model Work {
   openCount    Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-  chapters     Chapter[]
-  flags        Flag[]
-  shares       WorkShare[]
+  chapters            Chapter[]
+  flags               Flag[]
+  shares              WorkShare[]
+  freeReadSubmission  FreeReadSubmission?
 
   @@index([universeId])
   @@index([coverImageId])
@@ -455,6 +457,48 @@ model Chapter {
 
   @@index([workId])
   @@index([workId, order])
+}
+
+// --- Free Read Submissions ---
+// One per work. status: "pending" | "approved" | "rejected".
+// Approved submissions appear on the public Start Reading page.
+// submissionType: "chapters" | "full"
+// selectedChapterIds: JSON array of Chapter IDs (only when type="chapters")
+// coverImageData: Sharp-compressed JPEG bytes, served via /api/free-read-cover/[id]
+// coverBgIndex: 1-10, references /public/cover-backgrounds/cover-bg-N.jpg
+model FreeReadSubmission {
+  id                 String    @id @default(cuid())
+  workId             String    @unique
+  work               Work      @relation(fields: [workId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  submissionType     String    // "chapters" | "full"
+  selectedChapterIds String?   // JSON: string[]
+  title              String
+  description        String
+  contentRating      String    // "General" | "Teen" | "Mature Themes" | "Adult"
+  coverImageData     Bytes?
+  coverBgIndex       Int?
+  status             String    @default("pending")
+  submittedAt        DateTime  @default(now())
+  reviewedAt         DateTime?
+  publishedAt        DateTime?
+  likes              FreeReadLike[]
+
+  @@index([status])
+}
+
+// --- Free Read Likes ---
+// One row per (submission, IP). Prevents duplicate likes without requiring login.
+model FreeReadLike {
+  id           String             @id @default(cuid())
+  submissionId String
+  submission   FreeReadSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  ipAddress    String
+  createdAt    DateTime           @default(now())
+
+  @@unique([submissionId, ipAddress])
+  @@index([submissionId])
 }
 
 // --- Writing Flags ---

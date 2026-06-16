@@ -9,7 +9,7 @@ export default async function AuthorApprovalsPage() {
   const session = await getSession();
   if (!session?.isSuperAdmin) redirect("/admin");
 
-  const [profiles, joinRequests] = await Promise.all([
+  const [profiles, joinRequests, freeReadSubmissions] = await Promise.all([
     prisma.authorProfile.findMany({
       orderBy: { submittedAt: "desc" },
       select: {
@@ -49,7 +49,43 @@ export default async function AuthorApprovalsPage() {
         reviewedAt: true,
       },
     }),
+    prisma.freeReadSubmission.findMany({
+      orderBy: { submittedAt: "desc" },
+      select: {
+        id: true,
+        submissionType: true,
+        selectedChapterIds: true,
+        title: true,
+        description: true,
+        contentRating: true,
+        coverBgIndex: true,
+        coverImageData: true,
+        status: true,
+        submittedAt: true,
+        reviewedAt: true,
+        work: { select: { id: true, title: true, type: true } },
+        user: { select: { id: true, username: true } },
+      },
+    }),
   ]);
+
+  // For chapter titles on "chapters" submissions
+  const chapterIds: string[] = [];
+  for (const sub of freeReadSubmissions) {
+    if (sub.submissionType === "chapters" && sub.selectedChapterIds) {
+      try {
+        const ids = JSON.parse(sub.selectedChapterIds) as string[];
+        chapterIds.push(...ids);
+      } catch { /* ignore */ }
+    }
+  }
+  const chapters = chapterIds.length
+    ? await prisma.chapter.findMany({
+        where: { id: { in: chapterIds } },
+        select: { id: true, title: true },
+      })
+    : [];
+  const chapterMap = Object.fromEntries(chapters.map((c) => [c.id, c.title]));
 
   return (
     <div style={{ maxWidth: "860px" }}>
@@ -57,7 +93,7 @@ export default async function AuthorApprovalsPage() {
         Author Approvals
       </h2>
       <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "2.5rem" }}>
-        Review and approve author profiles and join requests.
+        Review and approve author profiles, join requests, and Start Reading submissions.
       </p>
 
       <ApprovalsClient
@@ -72,6 +108,22 @@ export default async function AuthorApprovalsPage() {
           ...r,
           submittedAt: r.submittedAt.toISOString(),
           reviewedAt: r.reviewedAt?.toISOString() ?? null,
+        }))}
+        freeReadSubmissions={freeReadSubmissions.map((s) => ({
+          id: s.id,
+          submissionType: s.submissionType,
+          selectedChapterIds: s.selectedChapterIds,
+          title: s.title,
+          description: s.description,
+          contentRating: s.contentRating,
+          coverBgIndex: s.coverBgIndex,
+          hasCoverImage: !!s.coverImageData,
+          status: s.status,
+          submittedAt: s.submittedAt.toISOString(),
+          reviewedAt: s.reviewedAt?.toISOString() ?? null,
+          work: s.work,
+          user: s.user,
+          chapterMap,
         }))}
       />
     </div>
