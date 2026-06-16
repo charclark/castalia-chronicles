@@ -81,6 +81,7 @@ export default function AuthorProfileEditor({
   status,
   submittedAt,
   approvedAt,
+  rejectionNote,
 }: {
   userId: string;
   initialEyebrow: string | null;
@@ -90,6 +91,7 @@ export default function AuthorProfileEditor({
   status: string | null;
   submittedAt: string | null;
   approvedAt: string | null;
+  rejectionNote: string | null;
 }) {
   const router = useRouter();
   const [profileState, profileAction, profilePending] = useActionState(saveAuthorProfile, null);
@@ -174,10 +176,15 @@ export default function AuthorProfileEditor({
         Fill in your profile and submit for approval. Approved profiles appear on the public Our Authors page. Any change — including a new photo — requires Char&apos;s re-approval before it goes live.
       </p>
       {submittedDate && (
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)", marginBottom: "2rem" }}>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)", marginBottom: rejectionNote && status === "rejected" ? "0.6rem" : "2rem" }}>
           {status === "approved" && approvedDate
             ? `Approved on ${approvedDate}`
             : `Last submitted ${submittedDate}`}
+        </p>
+      )}
+      {rejectionNote && status === "rejected" && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontStyle: "italic", color: "#d4848e", marginBottom: "2rem" }}>
+          Feedback from WriteWright: {rejectionNote}
         </p>
       )}
       {!submittedDate && <div style={{ marginBottom: "2rem" }} />}

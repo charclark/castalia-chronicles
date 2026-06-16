@@ -143,12 +143,19 @@ export async function approveFreeReadSubmission(id: string): Promise<void> {
   revalidatePath("/free-read");
 }
 
-export async function rejectFreeReadSubmission(id: string): Promise<void> {
+export async function rejectFreeReadSubmission(id: string, rejectionNote?: string): Promise<void> {
   await requireSuperAdmin();
   await prisma.freeReadSubmission.update({
     where: { id },
-    data: { status: "rejected", reviewedAt: new Date() },
+    data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
   });
+  revalidatePath("/admin/author-approvals");
+  revalidatePath("/free-read");
+}
+
+export async function dismissFreeReadSubmission(id: string): Promise<void> {
+  await requireSuperAdmin();
+  await prisma.freeReadSubmission.delete({ where: { id } });
   revalidatePath("/admin/author-approvals");
   revalidatePath("/free-read");
 }

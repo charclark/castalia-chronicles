@@ -135,13 +135,20 @@ export async function approveDiscoverBooksSubmission(id: string): Promise<void> 
   revalidatePath("/admin/author-approvals");
 }
 
-export async function rejectDiscoverBooksSubmission(id: string): Promise<void> {
+export async function rejectDiscoverBooksSubmission(id: string, rejectionNote?: string): Promise<void> {
   await requireSuperAdmin();
   await prisma.discoverBooksSubmission.update({
     where: { id },
-    data: { status: "rejected", reviewedAt: new Date() },
+    data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
   });
   revalidatePath("/admin/author-approvals");
+}
+
+export async function dismissDiscoverBooksSubmission(id: string): Promise<void> {
+  await requireSuperAdmin();
+  await prisma.discoverBooksSubmission.delete({ where: { id } });
+  revalidatePath("/admin/author-approvals");
+  revalidatePath("/books");
 }
 
 export async function likeDiscoverBooks(

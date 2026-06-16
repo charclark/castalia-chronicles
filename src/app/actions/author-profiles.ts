@@ -96,12 +96,19 @@ export async function approveAuthorProfile(id: string): Promise<void> {
   revalidatePath("/our-authors");
 }
 
-export async function rejectAuthorProfile(id: string): Promise<void> {
+export async function rejectAuthorProfile(id: string, rejectionNote?: string): Promise<void> {
   await requireSuperAdmin();
   await prisma.authorProfile.update({
     where: { id },
-    data: { status: "rejected", approvedAt: null },
+    data: { status: "rejected", approvedAt: null, rejectionNote: rejectionNote ?? null },
   });
+  revalidatePath("/admin/author-approvals");
+  revalidatePath("/our-authors");
+}
+
+export async function dismissAuthorProfile(id: string): Promise<void> {
+  await requireSuperAdmin();
+  await prisma.authorProfile.delete({ where: { id } });
   revalidatePath("/admin/author-approvals");
   revalidatePath("/our-authors");
 }

@@ -66,6 +66,7 @@ export default async function WorkPage({
         coverImageData: true,
         status: true,
         submittedAt: true,
+        rejectionNote: true,
       },
     }),
     prisma.discoverBooksSubmission.findUnique({
@@ -82,6 +83,7 @@ export default async function WorkPage({
         contentRating: true,
         status: true,
         submittedAt: true,
+        rejectionNote: true,
       },
     }),
   ]);
@@ -110,6 +112,7 @@ export default async function WorkPage({
         hasCoverImage: !!rawSubmission.coverImageData,
         status: rawSubmission.status,
         submittedAt: rawSubmission.submittedAt.toISOString(),
+        rejectionNote: rawSubmission.rejectionNote ?? null,
       }
     : null;
 
@@ -126,6 +129,7 @@ export default async function WorkPage({
         contentRating: rawDbSub.contentRating,
         status: rawDbSub.status,
         submittedAt: rawDbSub.submittedAt.toISOString(),
+        rejectionNote: rawDbSub.rejectionNote ?? null,
       }
     : null;
 

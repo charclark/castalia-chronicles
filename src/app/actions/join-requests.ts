@@ -104,11 +104,17 @@ export async function approveJoinRequest(id: string): Promise<void> {
   revalidatePath("/admin/author-approvals");
 }
 
-export async function rejectJoinRequest(id: string): Promise<void> {
+export async function rejectJoinRequest(id: string, rejectionNote?: string): Promise<void> {
   await requireSuperAdmin();
   await prisma.joinRequest.update({
     where: { id },
-    data: { status: "rejected", reviewedAt: new Date() },
+    data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
   });
+  revalidatePath("/admin/author-approvals");
+}
+
+export async function dismissJoinRequest(id: string): Promise<void> {
+  await requireSuperAdmin();
+  await prisma.joinRequest.delete({ where: { id } });
   revalidatePath("/admin/author-approvals");
 }

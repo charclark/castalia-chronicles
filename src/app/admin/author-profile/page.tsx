@@ -20,6 +20,7 @@ export default async function AuthorProfilePage() {
       status: true,
       submittedAt: true,
       approvedAt: true,
+      rejectionNote: true,
     },
   });
 
@@ -33,6 +34,7 @@ export default async function AuthorProfilePage() {
       status={profile?.status ?? null}
       submittedAt={profile?.submittedAt?.toISOString() ?? null}
       approvedAt={profile?.approvedAt?.toISOString() ?? null}
+      rejectionNote={profile?.rejectionNote ?? null}
     />
   );
 }

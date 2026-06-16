@@ -18,6 +18,7 @@ type Submission = {
   hasCoverImage: boolean;
   status: string;
   submittedAt: string;
+  rejectionNote: string | null;
 };
 
 type Props = {
@@ -160,6 +161,11 @@ export default function FreeReadSubmitForm({ workId, workTitle, chapters, existi
               {currentStatus === "rejected" && "Not approved — you can edit and resubmit"}
             </span>
           </div>
+          {currentStatus === "rejected" && sub.rejectionNote && (
+            <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", fontStyle: "italic", color: "#d4848e", margin: 0 }}>
+              Feedback from WriteWright: {sub.rejectionNote}
+            </p>
+          )}
           <p style={{ fontFamily: "var(--font-heading)", fontSize: "1rem", color: "var(--color-ink)", margin: 0 }}>
             {sub.title}
           </p>

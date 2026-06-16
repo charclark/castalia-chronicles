@@ -47,6 +47,7 @@ type FreeReadSubmission = {
   hasCoverImage: boolean;
   status: string;
   submittedAt: string;
+  rejectionNote: string | null;
 } | null;
 
 type DiscoverBooksSubmission = {
@@ -61,6 +62,7 @@ type DiscoverBooksSubmission = {
   contentRating: string;
   status: string;
   submittedAt: string;
+  rejectionNote: string | null;
 } | null;
 
 type ImageOption = { id: string; label: string; category: string };

@@ -21,6 +21,7 @@ export default async function AuthorApprovalsPage() {
         status: true,
         submittedAt: true,
         approvedAt: true,
+        rejectionNote: true,
         user: { select: { id: true, username: true } },
       },
     }),
@@ -47,6 +48,7 @@ export default async function AuthorApprovalsPage() {
         submittedAt: true,
         status: true,
         reviewedAt: true,
+        rejectionNote: true,
       },
     }),
     prisma.freeReadSubmission.findMany({
@@ -63,7 +65,8 @@ export default async function AuthorApprovalsPage() {
         status: true,
         submittedAt: true,
         reviewedAt: true,
-        work: { select: { id: true, title: true, type: true } },
+        rejectionNote: true,
+        work: { select: { id: true, title: true, type: true, content: true } },
         user: { select: { id: true, username: true } },
       },
     }),
@@ -83,13 +86,14 @@ export default async function AuthorApprovalsPage() {
         submittedAt: true,
         reviewedAt: true,
         publishedAt: true,
+        rejectionNote: true,
         work: { select: { id: true, title: true } },
         user: { select: { id: true, username: true } },
       },
     }),
   ]);
 
-  // For chapter titles on "chapters" submissions
+  // For chapter titles + content on "chapters" submissions
   const chapterIds: string[] = [];
   for (const sub of freeReadSubmissions) {
     if (sub.submissionType === "chapters" && sub.selectedChapterIds) {
@@ -102,10 +106,11 @@ export default async function AuthorApprovalsPage() {
   const chapters = chapterIds.length
     ? await prisma.chapter.findMany({
         where: { id: { in: chapterIds } },
-        select: { id: true, title: true },
+        select: { id: true, title: true, content: true },
       })
     : [];
   const chapterMap = Object.fromEntries(chapters.map((c) => [c.id, c.title]));
+  const chapterContent = Object.fromEntries(chapters.map((c) => [c.id, c.content ?? ""]));
 
   return (
     <div style={{ maxWidth: "860px" }}>
@@ -123,11 +128,13 @@ export default async function AuthorApprovalsPage() {
           photoData: undefined,
           submittedAt: p.submittedAt.toISOString(),
           approvedAt: p.approvedAt?.toISOString() ?? null,
+          rejectionNote: p.rejectionNote ?? null,
         }))}
         joinRequests={joinRequests.map((r) => ({
           ...r,
           submittedAt: r.submittedAt.toISOString(),
           reviewedAt: r.reviewedAt?.toISOString() ?? null,
+          rejectionNote: r.rejectionNote ?? null,
         }))}
         freeReadSubmissions={freeReadSubmissions.map((s) => ({
           id: s.id,
@@ -141,9 +148,11 @@ export default async function AuthorApprovalsPage() {
           status: s.status,
           submittedAt: s.submittedAt.toISOString(),
           reviewedAt: s.reviewedAt?.toISOString() ?? null,
-          work: s.work,
+          rejectionNote: s.rejectionNote ?? null,
+          work: { id: s.work.id, title: s.work.title, type: s.work.type, content: s.work.content ?? "" },
           user: s.user,
           chapterMap,
+          chapterContent,
         }))}
         discoverBooksSubmissions={discoverBooksSubmissions.map((s) => ({
           id: s.id,
@@ -157,6 +166,7 @@ export default async function AuthorApprovalsPage() {
           contentRating: s.contentRating,
           status: s.status,
           submittedAt: s.submittedAt.toISOString(),
+          rejectionNote: s.rejectionNote ?? null,
           work: s.work,
           user: s.user,
           isReplacing: s.status === "pending" && !!s.publishedAt,

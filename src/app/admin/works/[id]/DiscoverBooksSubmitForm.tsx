@@ -19,6 +19,7 @@ type ExistingSubmission = {
   contentRating: string;
   status: string;
   submittedAt: string;
+  rejectionNote: string | null;
 } | null;
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
@@ -366,6 +367,11 @@ export default function DiscoverBooksSubmitForm({
                 by {ex.authorName}
               </p>
               <StatusPill status={status} />
+              {status === "rejected" && ex.rejectionNote && (
+                <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", fontStyle: "italic", color: "#d4848e", marginTop: "0.35rem" }}>
+                  Feedback from WriteWright: {ex.rejectionNote}
+                </p>
+              )}
             </div>
           </div>
 

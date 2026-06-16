@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { approveAuthorProfile, rejectAuthorProfile } from "@/app/actions/author-profiles";
-import { approveJoinRequest, rejectJoinRequest } from "@/app/actions/join-requests";
-import { approveFreeReadSubmission, rejectFreeReadSubmission } from "@/app/actions/free-read-submissions";
-import { approveDiscoverBooksSubmission, rejectDiscoverBooksSubmission } from "@/app/actions/discover-books-submissions";
+import { approveAuthorProfile, rejectAuthorProfile, dismissAuthorProfile } from "@/app/actions/author-profiles";
+import { approveJoinRequest, rejectJoinRequest, dismissJoinRequest } from "@/app/actions/join-requests";
+import { approveFreeReadSubmission, rejectFreeReadSubmission, dismissFreeReadSubmission } from "@/app/actions/free-read-submissions";
+import { approveDiscoverBooksSubmission, rejectDiscoverBooksSubmission, dismissDiscoverBooksSubmission } from "@/app/actions/discover-books-submissions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +17,7 @@ type Profile = {
   status: string;
   submittedAt: string;
   approvedAt: string | null;
+  rejectionNote: string | null;
   user: { id: string; username: string };
 };
 
@@ -41,9 +42,47 @@ type JoinRequest = {
   submittedAt: string;
   status: string;
   reviewedAt: string | null;
+  rejectionNote: string | null;
 };
 
-// ── Shared components ─────────────────────────────────────────────────────────
+type FreeReadSub = {
+  id: string;
+  submissionType: string;
+  selectedChapterIds: string | null;
+  title: string;
+  description: string;
+  contentRating: string;
+  coverBgIndex: number | null;
+  hasCoverImage: boolean;
+  status: string;
+  submittedAt: string;
+  reviewedAt: string | null;
+  rejectionNote: string | null;
+  work: { id: string; title: string; type: string; content: string };
+  user: { id: string; username: string };
+  chapterMap: Record<string, string>;
+  chapterContent: Record<string, string>;
+};
+
+type DiscoverBooksSub = {
+  id: string;
+  bookTitle: string;
+  authorName: string;
+  coverBgIndex: number | null;
+  hasCoverImage: boolean;
+  purchaseUrl: string;
+  purchaseLinkText: string;
+  description: string;
+  contentRating: string;
+  status: string;
+  submittedAt: string;
+  rejectionNote: string | null;
+  work: { id: string; title: string };
+  user: { id: string; username: string };
+  isReplacing: boolean;
+};
+
+// ── Shared style constants ─────────────────────────────────────────────────────
 
 const statusColors: Record<string, { color: string; border: string; bg: string }> = {
   pending:  { color: "var(--color-gold)",    border: "var(--color-gold-dim)",    bg: "rgba(201,168,76,0.08)" },
@@ -65,9 +104,55 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function ApproveRejectButtons({ status, pending, onApprove, onReject }: {
-  status: string; pending: boolean; onApprove: () => void; onReject: () => void;
+const metaText: React.CSSProperties = {
+  fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-ink-faint)",
+};
+const metaLabel: React.CSSProperties = {
+  fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.08em",
+  textTransform: "uppercase", color: "var(--color-ink-faint)", marginBottom: "0.15rem",
+};
+const cardStyle: React.CSSProperties = {
+  background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
+  borderRadius: "4px", padding: "1.25rem 1.5rem",
+};
+
+// ── Reject with note prompt ───────────────────────────────────────────────────
+
+function promptRejectNote(label: string): { confirmed: boolean; note: string | undefined } {
+  const note = window.prompt(`Reject ${label}?\n\nOptional feedback for the author (leave blank for none):`);
+  if (note === null) return { confirmed: false, note: undefined };
+  return { confirmed: true, note: note.trim() || undefined };
+}
+
+// ── Approve/Reject/Dismiss buttons ────────────────────────────────────────────
+
+function ActionButtons({ status, pending, tab, onApprove, onReject, onDismiss }: {
+  status: string;
+  pending: boolean;
+  tab: "pending" | "approved" | "rejected";
+  onApprove: () => void;
+  onReject: () => void;
+  onDismiss: () => void;
 }) {
+  if (tab === "rejected") {
+    return (
+      <button
+        onClick={onDismiss}
+        disabled={pending}
+        style={{
+          fontFamily: "var(--font-body)", fontSize: "0.82rem",
+          color: "var(--color-ink-faint)",
+          background: "transparent",
+          border: "1px solid var(--color-border)",
+          borderRadius: "3px", padding: "0.3rem 0.85rem",
+          cursor: pending ? "default" : "pointer",
+        }}
+      >
+        Dismiss (delete record)
+      </button>
+    );
+  }
+
   return (
     <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap" }}>
       <button onClick={onApprove} disabled={pending || status === "approved"} style={{
@@ -88,34 +173,23 @@ function ApproveRejectButtons({ status, pending, onApprove, onReject }: {
         borderRadius: "3px", padding: "0.3rem 0.85rem",
         cursor: pending || status === "rejected" ? "default" : "pointer",
       }}>
-        {status === "rejected" ? "Rejected" : "Reject"}
+        {status === "rejected" ? "Rejected" : "Reject…"}
       </button>
     </div>
   );
 }
 
-const metaText: React.CSSProperties = {
-  fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-ink-faint)",
-};
-const metaLabel: React.CSSProperties = {
-  fontFamily: "var(--font-body)", fontSize: "0.68rem", letterSpacing: "0.08em",
-  textTransform: "uppercase", color: "var(--color-ink-faint)", marginBottom: "0.15rem",
-};
-const cardStyle: React.CSSProperties = {
-  background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
-  borderRadius: "4px", padding: "1.25rem 1.5rem",
-};
-
 // ── Author Profile Card ───────────────────────────────────────────────────────
 
-function ProfileCard({ profile }: { profile: Profile }) {
+function ProfileCard({ profile, tab, onRemove }: { profile: Profile; tab: "pending" | "approved" | "rejected"; onRemove: (id: string) => void }) {
   const [status, setStatus] = useState(profile.status);
+  const [expanded, setExpanded] = useState(false);
   const [pending, startTransition] = useTransition();
   const submitted = new Date(profile.submittedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
     <div style={{ ...cardStyle, opacity: pending ? 0.6 : 1, transition: "opacity 0.15s" }}>
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           {profile.hasPhoto && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -128,7 +202,16 @@ function ProfileCard({ profile }: { profile: Profile }) {
             <p style={metaText}>@{profile.user.username} · submitted {submitted}</p>
           </div>
         </div>
-        <StatusBadge status={status} />
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          <StatusBadge status={status} />
+          <button
+            type="button"
+            onClick={() => setExpanded((x) => !x)}
+            style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.2rem 0.6rem", color: "var(--color-ink-faint)", cursor: "pointer" }}
+          >
+            {expanded ? "Collapse" : "Full preview"}
+          </button>
+        </div>
       </div>
 
       {profile.eyebrowText && (
@@ -136,18 +219,33 @@ function ProfileCard({ profile }: { profile: Profile }) {
           {profile.eyebrowText}
         </p>
       )}
+
       {profile.bodyText && (
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-muted)", lineHeight: 1.6, marginBottom: "1rem", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+        <p style={{
+          fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-muted)", lineHeight: 1.6, marginBottom: "1rem",
+          ...(expanded ? {} : { display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }),
+        }}>
           {profile.bodyText}
         </p>
       )}
 
-      <ApproveRejectButtons
-        status={status} pending={pending}
+      {profile.rejectionNote && status === "rejected" && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", fontStyle: "italic", color: "#d4848e", marginBottom: "0.75rem" }}>
+          Note left: "{profile.rejectionNote}"
+        </p>
+      )}
+
+      <ActionButtons
+        status={status} pending={pending} tab={tab}
         onApprove={() => startTransition(async () => { await approveAuthorProfile(profile.id); setStatus("approved"); })}
         onReject={() => {
-          if (!window.confirm(`Reject ${profile.user.username}'s author profile?`)) return;
-          startTransition(async () => { await rejectAuthorProfile(profile.id); setStatus("rejected"); });
+          const { confirmed, note } = promptRejectNote(`${profile.user.username}'s author profile`);
+          if (!confirmed) return;
+          startTransition(async () => { await rejectAuthorProfile(profile.id, note); setStatus("rejected"); });
+        }}
+        onDismiss={() => {
+          if (!window.confirm(`Permanently delete ${profile.user.username}'s rejected profile?`)) return;
+          startTransition(async () => { await dismissAuthorProfile(profile.id); onRemove(profile.id); });
         }}
       />
     </div>
@@ -156,10 +254,10 @@ function ProfileCard({ profile }: { profile: Profile }) {
 
 // ── Join Request Card ─────────────────────────────────────────────────────────
 
-function JoinRequestCard({ req }: { req: JoinRequest }) {
+function JoinRequestCard({ req, tab, onRemove }: { req: JoinRequest; tab: "pending" | "approved" | "rejected"; onRemove: (id: string) => void }) {
   const [status, setStatus] = useState(req.status);
   const [pending, startTransition] = useTransition();
-  const [expanded, setExpanded] = useState(req.status === "pending");
+  const [expanded, setExpanded] = useState(false);
 
   const submitted = new Date(req.submittedAt).toLocaleString("en-US", {
     month: "short", day: "numeric", year: "numeric",
@@ -172,7 +270,6 @@ function JoinRequestCard({ req }: { req: JoinRequest }) {
 
   return (
     <div style={{ ...cardStyle, opacity: pending ? 0.6 : 1, transition: "opacity 0.15s" }}>
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.6rem", flexWrap: "wrap" }}>
         <div>
           <p style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem", color: "var(--color-ink)", marginBottom: "0.15rem" }}>{req.fullName}</p>
@@ -248,12 +345,23 @@ function JoinRequestCard({ req }: { req: JoinRequest }) {
         </div>
       )}
 
-      <ApproveRejectButtons
-        status={status} pending={pending}
+      {req.rejectionNote && status === "rejected" && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", fontStyle: "italic", color: "#d4848e", marginBottom: "0.75rem" }}>
+          Note left: "{req.rejectionNote}"
+        </p>
+      )}
+
+      <ActionButtons
+        status={status} pending={pending} tab={tab}
         onApprove={() => startTransition(async () => { await approveJoinRequest(req.id); setStatus("approved"); })}
         onReject={() => {
-          if (!window.confirm(`Reject ${req.fullName}'s application?`)) return;
-          startTransition(async () => { await rejectJoinRequest(req.id); setStatus("rejected"); });
+          const { confirmed, note } = promptRejectNote(`${req.fullName}'s application`);
+          if (!confirmed) return;
+          startTransition(async () => { await rejectJoinRequest(req.id, note); setStatus("rejected"); });
+        }}
+        onDismiss={() => {
+          if (!window.confirm(`Permanently delete ${req.fullName}'s rejected application?`)) return;
+          startTransition(async () => { await dismissJoinRequest(req.id); onRemove(req.id); });
         }}
       />
     </div>
@@ -262,40 +370,22 @@ function JoinRequestCard({ req }: { req: JoinRequest }) {
 
 // ── Free Read Submission Card ─────────────────────────────────────────────────
 
-type FreeReadSub = {
-  id: string;
-  submissionType: string;
-  selectedChapterIds: string | null;
-  title: string;
-  description: string;
-  contentRating: string;
-  coverBgIndex: number | null;
-  hasCoverImage: boolean;
-  status: string;
-  submittedAt: string;
-  reviewedAt: string | null;
-  work: { id: string; title: string; type: string };
-  user: { id: string; username: string };
-  chapterMap: Record<string, string>;
-};
-
-function FreeReadSubCard({ sub }: { sub: FreeReadSub }) {
+function FreeReadSubCard({ sub, tab, onRemove }: { sub: FreeReadSub; tab: "pending" | "approved" | "rejected"; onRemove: (id: string) => void }) {
   const [status, setStatus] = useState(sub.status);
   const [pending, startTransition] = useTransition();
-  const [expanded, setExpanded] = useState(sub.status === "pending");
+  const [expanded, setExpanded] = useState(false);
 
   const submitted = new Date(sub.submittedAt).toLocaleString("en-US", {
     month: "short", day: "numeric", year: "numeric",
     hour: "2-digit", minute: "2-digit", timeZoneName: "short",
   });
 
-  const chapterTitles: string[] = (() => {
+  const chapterIds: string[] = (() => {
     if (sub.submissionType !== "chapters" || !sub.selectedChapterIds) return [];
-    try {
-      const ids = JSON.parse(sub.selectedChapterIds) as string[];
-      return ids.map((id) => sub.chapterMap[id] ?? id);
-    } catch { return []; }
+    try { return JSON.parse(sub.selectedChapterIds) as string[]; } catch { return []; }
   })();
+
+  const chapterTitles = chapterIds.map((id) => sub.chapterMap[id] ?? id);
 
   const coverSrc = sub.hasCoverImage
     ? `/api/free-read-cover/${sub.id}`
@@ -327,7 +417,7 @@ function FreeReadSubCard({ sub }: { sub: FreeReadSub }) {
             onClick={() => setExpanded((x) => !x)}
             style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.2rem 0.6rem", color: "var(--color-ink-faint)", cursor: "pointer" }}
           >
-            {expanded ? "Collapse" : "Details"}
+            {expanded ? "Collapse" : "Full preview"}
           </button>
         </div>
       </div>
@@ -345,25 +435,63 @@ function FreeReadSubCard({ sub }: { sub: FreeReadSub }) {
             </div>
           </div>
 
-          {sub.submissionType === "chapters" && chapterTitles.length > 0 && (
+          {/* Full content preview */}
+          {sub.submissionType === "chapters" && chapterIds.length > 0 && (
             <div>
-              <p style={metaLabel}>Selected Chapters</p>
-              <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
-                {chapterTitles.map((t, i) => (
-                  <li key={i} style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-muted)" }}>{t}</li>
-                ))}
-              </ul>
+              <p style={metaLabel}>Chapter Content</p>
+              {chapterIds.map((id) => (
+                <div key={id} style={{ marginBottom: "1.5rem" }}>
+                  <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", color: "var(--color-gold)", marginBottom: "0.5rem" }}>
+                    {sub.chapterMap[id] ?? id}
+                  </p>
+                  {sub.chapterContent[id] ? (
+                    <div
+                      className="prose-preview"
+                      dangerouslySetInnerHTML={{ __html: sub.chapterContent[id] }}
+                      style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-muted)", lineHeight: 1.75, maxHeight: "320px", overflowY: "auto", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.75rem 1rem" }}
+                    />
+                  ) : (
+                    <p style={{ ...metaText, fontStyle: "italic" }}>No content.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sub.submissionType === "full" && (
+            <div>
+              <p style={metaLabel}>Full Work Content</p>
+              {sub.work.content ? (
+                <div
+                  className="prose-preview"
+                  dangerouslySetInnerHTML={{ __html: sub.work.content }}
+                  style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-muted)", lineHeight: 1.75, maxHeight: "400px", overflowY: "auto", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.75rem 1rem" }}
+                />
+              ) : (
+                <p style={{ ...metaText, fontStyle: "italic" }}>No content saved yet.</p>
+              )}
             </div>
           )}
         </div>
       )}
 
-      <ApproveRejectButtons
-        status={status} pending={pending}
+      {sub.rejectionNote && status === "rejected" && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", fontStyle: "italic", color: "#d4848e", marginBottom: "0.75rem" }}>
+          Note left: "{sub.rejectionNote}"
+        </p>
+      )}
+
+      <ActionButtons
+        status={status} pending={pending} tab={tab}
         onApprove={() => startTransition(async () => { await approveFreeReadSubmission(sub.id); setStatus("approved"); })}
         onReject={() => {
-          if (!window.confirm(`Reject "${sub.title}" by @${sub.user.username}?`)) return;
-          startTransition(async () => { await rejectFreeReadSubmission(sub.id); setStatus("rejected"); });
+          const { confirmed, note } = promptRejectNote(`"${sub.title}" by @${sub.user.username}`);
+          if (!confirmed) return;
+          startTransition(async () => { await rejectFreeReadSubmission(sub.id, note); setStatus("rejected"); });
+        }}
+        onDismiss={() => {
+          if (!window.confirm(`Permanently delete "${sub.title}"'s rejected submission?`)) return;
+          startTransition(async () => { await dismissFreeReadSubmission(sub.id); onRemove(sub.id); });
         }}
       />
     </div>
@@ -372,27 +500,10 @@ function FreeReadSubCard({ sub }: { sub: FreeReadSub }) {
 
 // ── Discover Books Submission Card ────────────────────────────────────────────
 
-type DiscoverBooksSub = {
-  id: string;
-  bookTitle: string;
-  authorName: string;
-  coverBgIndex: number | null;
-  hasCoverImage: boolean;
-  purchaseUrl: string;
-  purchaseLinkText: string;
-  description: string;
-  contentRating: string;
-  status: string;
-  submittedAt: string;
-  work: { id: string; title: string };
-  user: { id: string; username: string };
-  isReplacing: boolean;
-};
-
-function DiscoverBooksSubCard({ sub }: { sub: DiscoverBooksSub }) {
+function DiscoverBooksSubCard({ sub, tab, onRemove }: { sub: DiscoverBooksSub; tab: "pending" | "approved" | "rejected"; onRemove: (id: string) => void }) {
   const [status, setStatus] = useState(sub.status);
   const [pending, startTransition] = useTransition();
-  const [expanded, setExpanded] = useState(sub.status === "pending");
+  const [expanded, setExpanded] = useState(false);
 
   const submitted = new Date(sub.submittedAt).toLocaleString("en-US", {
     month: "short", day: "numeric", year: "numeric",
@@ -438,7 +549,7 @@ function DiscoverBooksSubCard({ sub }: { sub: DiscoverBooksSub }) {
             onClick={() => setExpanded((x) => !x)}
             style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.2rem 0.6rem", color: "var(--color-ink-faint)", cursor: "pointer" }}
           >
-            {expanded ? "Collapse" : "Details"}
+            {expanded ? "Collapse" : "Full preview"}
           </button>
         </div>
       </div>
@@ -462,59 +573,91 @@ function DiscoverBooksSubCard({ sub }: { sub: DiscoverBooksSub }) {
         </div>
       )}
 
-      <ApproveRejectButtons
-        status={status} pending={pending}
+      {sub.rejectionNote && status === "rejected" && (
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.8rem", fontStyle: "italic", color: "#d4848e", marginBottom: "0.75rem" }}>
+          Note left: "{sub.rejectionNote}"
+        </p>
+      )}
+
+      <ActionButtons
+        status={status} pending={pending} tab={tab}
         onApprove={() => startTransition(async () => { await approveDiscoverBooksSubmission(sub.id); setStatus("approved"); })}
         onReject={() => {
-          if (!window.confirm(`Reject "${sub.bookTitle}" by ${sub.authorName}?`)) return;
-          startTransition(async () => { await rejectDiscoverBooksSubmission(sub.id); setStatus("rejected"); });
+          const { confirmed, note } = promptRejectNote(`"${sub.bookTitle}" by ${sub.authorName}`);
+          if (!confirmed) return;
+          startTransition(async () => { await rejectDiscoverBooksSubmission(sub.id, note); setStatus("rejected"); });
+        }}
+        onDismiss={() => {
+          if (!window.confirm(`Permanently delete "${sub.bookTitle}"'s rejected submission?`)) return;
+          startTransition(async () => { await dismissDiscoverBooksSubmission(sub.id); onRemove(sub.id); });
         }}
       />
     </div>
   );
 }
 
-// ── Section wrapper ───────────────────────────────────────────────────────────
+// ── Tabbed section ────────────────────────────────────────────────────────────
 
-function CardSection<T extends { id: string; status: string }>({
-  emptyLabel, items, renderCard,
+type Tab = "pending" | "approved" | "rejected";
+
+function TabBar({ active, counts, onChange }: { active: Tab; counts: Record<Tab, number>; onChange: (t: Tab) => void }) {
+  const tabs: Tab[] = ["pending", "approved", "rejected"];
+  return (
+    <div style={{ display: "flex", gap: "0.25rem", marginBottom: "2rem", borderBottom: "1px solid var(--color-border)", paddingBottom: "0" }}>
+      {tabs.map((t) => {
+        const isActive = t === active;
+        return (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange(t)}
+            style={{
+              fontFamily: "var(--font-body)", fontSize: "0.85rem",
+              textTransform: "capitalize",
+              padding: "0.5rem 1.1rem",
+              background: "transparent",
+              border: "none",
+              borderBottom: isActive ? "2px solid var(--color-gold)" : "2px solid transparent",
+              color: isActive ? "var(--color-gold)" : "var(--color-ink-faint)",
+              cursor: "pointer",
+              marginBottom: "-1px",
+            }}
+          >
+            {t} {counts[t] > 0 ? `(${counts[t]})` : ""}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectionBlock<T extends { id: string; status: string }>({
+  title, subtitle, emptyLabel, items, tab, renderCard,
 }: {
+  title: string;
+  subtitle: string;
   emptyLabel: string;
   items: T[];
+  tab: Tab;
   renderCard: (item: T) => React.ReactNode;
 }) {
-  if (items.length === 0) {
-    return (
-      <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", padding: "0.75rem 0" }}>
-        No {emptyLabel} yet.
-      </p>
-    );
-  }
-
-  const pending = items.filter((i) => i.status === "pending");
-  const rest    = items.filter((i) => i.status !== "pending");
+  const filtered = items.filter((i) => i.status === tab);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {pending.length > 0 && (
-        <div>
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-gold)", marginBottom: "0.75rem" }}>
-            Pending ({pending.length})
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-            {pending.map((i) => renderCard(i))}
-          </div>
-        </div>
-      )}
-      {rest.length > 0 && (
-        <div>
-          {pending.length > 0 && <div style={{ height: "1px", background: "var(--color-border)", margin: "0.5rem 0 1.5rem" }} />}
-          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-ink-muted)", marginBottom: "0.75rem" }}>
-            Reviewed
-          </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-            {rest.map((i) => renderCard(i))}
-          </div>
+    <div style={{ marginBottom: "3.5rem" }}>
+      <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
+        {title}
+      </h3>
+      <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.5rem" }}>
+        {subtitle}
+      </p>
+      {filtered.length === 0 ? (
+        <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", padding: "0.5rem 0" }}>
+          No {emptyLabel} {tab}.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+          {filtered.map((i) => renderCard(i))}
         </div>
       )}
     </div>
@@ -524,86 +667,92 @@ function CardSection<T extends { id: string; status: string }>({
 // ── Root export ───────────────────────────────────────────────────────────────
 
 export default function ApprovalsClient({
-  profiles,
-  joinRequests,
-  freeReadSubmissions,
-  discoverBooksSubmissions,
+  profiles: initialProfiles,
+  joinRequests: initialJoinRequests,
+  freeReadSubmissions: initialFreeRead,
+  discoverBooksSubmissions: initialDiscoverBooks,
 }: {
   profiles: Profile[];
   joinRequests: JoinRequest[];
   freeReadSubmissions: FreeReadSub[];
   discoverBooksSubmissions: DiscoverBooksSub[];
 }) {
+  const [tab, setTab] = useState<Tab>("pending");
+  const [profiles, setProfiles] = useState(initialProfiles);
+  const [joinRequests, setJoinRequests] = useState(initialJoinRequests);
+  const [freeRead, setFreeRead] = useState(initialFreeRead);
+  const [discoverBooks, setDiscoverBooks] = useState(initialDiscoverBooks);
+
+  const removeProfile     = (id: string) => setProfiles((p) => p.filter((x) => x.id !== id));
+  const removeJoinRequest = (id: string) => setJoinRequests((p) => p.filter((x) => x.id !== id));
+  const removeFreeRead    = (id: string) => setFreeRead((p) => p.filter((x) => x.id !== id));
+  const removeDiscoverBooks = (id: string) => setDiscoverBooks((p) => p.filter((x) => x.id !== id));
+
+  const counts = (items: { status: string }[]): Record<Tab, number> => ({
+    pending:  items.filter((i) => i.status === "pending").length,
+    approved: items.filter((i) => i.status === "approved").length,
+    rejected: items.filter((i) => i.status === "rejected").length,
+  });
+
+  const totalCounts: Record<Tab, number> = {
+    pending:  counts(profiles).pending  + counts(joinRequests).pending  + counts(freeRead).pending  + counts(discoverBooks).pending,
+    approved: counts(profiles).approved + counts(joinRequests).approved + counts(freeRead).approved + counts(discoverBooks).approved,
+    rejected: counts(profiles).rejected + counts(joinRequests).rejected + counts(freeRead).rejected + counts(discoverBooks).rejected,
+  };
+
   return (
     <div>
-      {/* Discover Books Submissions */}
-      <div style={{ marginBottom: "3.5rem" }}>
-        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
-          Discover Books Submissions
-        </h3>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
-          Book listings submitted for the public Discover Books page.
-        </p>
-        <CardSection
-          emptyLabel="Discover Books submissions"
-          items={discoverBooksSubmissions}
-          renderCard={(s) => <DiscoverBooksSubCard key={s.id} sub={s} />}
-        />
-      </div>
+      <TabBar active={tab} counts={totalCounts} onChange={setTab} />
 
-      {/* Divider */}
+      <SectionBlock
+        title="Discover Books Submissions"
+        subtitle="Book listings submitted for the public Discover Books page."
+        emptyLabel="Discover Books submissions"
+        items={discoverBooks}
+        tab={tab}
+        renderCard={(s) => (
+          <DiscoverBooksSubCard key={s.id} sub={s} tab={tab} onRemove={removeDiscoverBooks} />
+        )}
+      />
+
       <div style={{ height: "1px", background: "var(--color-border-light)", marginBottom: "3.5rem" }} />
 
-      {/* Start Reading Submissions */}
-      <div style={{ marginBottom: "3.5rem" }}>
-        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
-          Start Reading Submissions
-        </h3>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
-          Works submitted for the public Start Reading section.
-        </p>
-        <CardSection
-          emptyLabel="Start Reading submissions"
-          items={freeReadSubmissions}
-          renderCard={(s) => <FreeReadSubCard key={s.id} sub={s} />}
-        />
-      </div>
+      <SectionBlock
+        title="Start Reading Submissions"
+        subtitle="Works submitted for the public Start Reading section."
+        emptyLabel="Start Reading submissions"
+        items={freeRead}
+        tab={tab}
+        renderCard={(s) => (
+          <FreeReadSubCard key={s.id} sub={s} tab={tab} onRemove={removeFreeRead} />
+        )}
+      />
 
-      {/* Divider */}
       <div style={{ height: "1px", background: "var(--color-border-light)", marginBottom: "3.5rem" }} />
 
-      {/* Join Requests */}
-      <div style={{ marginBottom: "3.5rem" }}>
-        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
-          Join Requests
-        </h3>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
-          Applications submitted via the Write With Us page.
-        </p>
-        <CardSection
-          emptyLabel="join requests submitted"
-          items={joinRequests}
-          renderCard={(r) => <JoinRequestCard key={r.id} req={r} />}
-        />
-      </div>
+      <SectionBlock
+        title="Join Requests"
+        subtitle="Applications submitted via the Write With Us page."
+        emptyLabel="join requests"
+        items={joinRequests}
+        tab={tab}
+        renderCard={(r) => (
+          <JoinRequestCard key={r.id} req={r} tab={tab} onRemove={removeJoinRequest} />
+        )}
+      />
 
-      {/* Divider */}
       <div style={{ height: "1px", background: "var(--color-border-light)", marginBottom: "3.5rem" }} />
 
-      {/* Author Profile Approvals */}
-      <div>
-        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
-          Author Profile Approvals
-        </h3>
-        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
-          Profiles submitted for display on the public Our Authors page.
-        </p>
-        <CardSection
-          emptyLabel="author profiles submitted"
-          items={profiles}
-          renderCard={(p) => <ProfileCard key={p.id} profile={p} />}
-        />
-      </div>
+      <SectionBlock
+        title="Author Profile Approvals"
+        subtitle="Profiles submitted for display on the public Our Authors page."
+        emptyLabel="author profiles"
+        items={profiles}
+        tab={tab}
+        renderCard={(p) => (
+          <ProfileCard key={p.id} profile={p} tab={tab} onRemove={removeProfile} />
+        )}
+      />
     </div>
   );
 }

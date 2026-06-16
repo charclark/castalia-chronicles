@@ -290,10 +290,11 @@ model AuthorProfile {
   headline    String?
   bodyText    String?
   photoData   Bytes?
-  status      String    @default("pending")
-  submittedAt DateTime  @default(now())
-  approvedAt  DateTime?
-  updatedAt   DateTime  @updatedAt
+  status        String    @default("pending")
+  submittedAt   DateTime  @default(now())
+  approvedAt    DateTime?
+  rejectionNote String?
+  updatedAt     DateTime  @updatedAt
 
   @@index([status])
 }
@@ -325,6 +326,7 @@ model JoinRequest {
   submittedAt            DateTime  @default(now())
   status                 String    @default("pending")
   reviewedAt             DateTime?
+  rejectionNote          String?
 
   @@index([status])
   @@index([submittedAt])
@@ -485,6 +487,7 @@ model FreeReadSubmission {
   submittedAt        DateTime  @default(now())
   reviewedAt         DateTime?
   publishedAt        DateTime?
+  rejectionNote      String?
   likes              FreeReadLike[]
 
   @@index([status])
@@ -527,6 +530,7 @@ model DiscoverBooksSubmission {
   submittedAt      DateTime  @default(now())
   reviewedAt       DateTime?
   publishedAt      DateTime?
+  rejectionNote    String?
   likes            DiscoverBooksLike[]
 
   @@index([status])
