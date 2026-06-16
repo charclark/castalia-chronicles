@@ -85,6 +85,7 @@ export default async function WorkPage({
         status: true,
         submittedAt: true,
         rejectionNote: true,
+        pendingEdits: true,
       },
     }),
   ]);
@@ -132,6 +133,7 @@ export default async function WorkPage({
         status: rawDbSub.status,
         submittedAt: rawDbSub.submittedAt.toISOString(),
         rejectionNote: rawDbSub.rejectionNote ?? null,
+        hasPendingEdit: !!rawDbSub.pendingEdits,
       }
     : null;
 

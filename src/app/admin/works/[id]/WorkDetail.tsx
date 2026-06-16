@@ -63,6 +63,7 @@ type DiscoverBooksSubmission = {
   contentRating: string;
   status: string;
   submittedAt: string;
+  hasPendingEdit: boolean;
   rejectionNote: string | null;
 } | null;
 
@@ -139,7 +140,7 @@ function ActionButton({
   );
 }
 
-// ── Publishing options (two-card layout) ─────────────────────────────────────
+// ── Publishing options ────────────────────────────────────────────────────────
 
 function PublishingSection({
   work,
@@ -154,97 +155,41 @@ function PublishingSection({
   discoverBooksSubmission: DiscoverBooksSubmission;
   defaultAuthorName: string;
 }) {
-  const [openPanel, setOpenPanel] = useState<"startReading" | "discoverBooks" | null>(null);
-
-  const card = (
-    active: boolean,
-    label: string,
-    title: string,
-    description: string,
-    onClick: () => void
-  ) => (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "0.35rem",
-        background: active ? "rgba(201,168,76,0.06)" : "var(--color-bg-elevated)",
-        border: `1px solid ${active ? "var(--color-gold-dim)" : "var(--color-border)"}`,
-        borderRadius: "4px", padding: "1rem 1.25rem",
-        cursor: "pointer", textAlign: "left", width: "100%",
-        transition: "border-color 0.15s, background 0.15s",
-      }}
-    >
-      <span style={{
-        fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.12em",
-        textTransform: "uppercase", color: active ? "var(--color-gold)" : "var(--color-ink-faint)",
-      }}>
-        {label}
-      </span>
-      <span style={{
-        fontFamily: "var(--font-heading)", fontSize: "1rem", letterSpacing: "0.04em",
-        color: active ? "var(--color-gold)" : "var(--color-ink)",
-      }}>
-        {title}
-      </span>
-      <span style={{
-        fontFamily: "var(--font-body)", fontSize: "0.78rem",
-        color: "var(--color-ink-faint)", lineHeight: 1.5,
-      }}>
-        {description}
-      </span>
-    </button>
-  );
+  const hasLiveVersion =
+    freeReadSubmission?.status === "approved" ||
+    discoverBooksSubmission?.status === "approved";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
       <p style={sectionLabel}>Publish This Work</p>
 
-      {/* Option 1 — Start Reading */}
-      {card(
-        openPanel === "startReading",
-        "Option 1",
-        "Submit to Start Reading — Free for Everyone",
-        "Share your work with readers for free. Choose specific chapters, a selection of chapters, or your full work. Readers can enjoy it directly on WriteWright at no cost. All submissions require approval before going live.",
-        () => setOpenPanel(openPanel === "startReading" ? null : "startReading")
-      )}
-
-      {openPanel === "startReading" && (
+      {/* Editor notice — only shown when something is live */}
+      {hasLiveVersion && (
         <div style={{
-          marginLeft: "1rem", paddingLeft: "1rem",
-          borderLeft: "2px solid var(--color-gold-dim)",
+          background: "var(--color-bg-elevated)", border: "1px solid var(--color-border)",
+          borderRadius: "3px", padding: "0.65rem 0.9rem",
         }}>
-          <FreeReadSubmitForm
-            workId={work.id}
-            workTitle={work.title}
-            chapters={chapters}
-            existingSubmission={freeReadSubmission}
-          />
+          <p style={{ fontFamily: "var(--font-body)", fontSize: "0.78rem", color: "var(--color-ink-faint)", margin: 0, lineHeight: 1.55 }}>
+            Changes you make in the editor do not affect your published version. To update what readers see, submit a new version for approval.
+          </p>
         </div>
       )}
 
-      {/* Option 2 — Discover Books */}
-      {card(
-        openPanel === "discoverBooks",
-        "Option 2",
-        "List on Discover Books — Sell Your Work",
-        "List your published book for sale. Share your cover, a short description, and a link where readers can purchase your work. No written content is shared — this is a storefront listing only.",
-        () => setOpenPanel(openPanel === "discoverBooks" ? null : "discoverBooks")
-      )}
+      {/* Start Reading widget */}
+      <FreeReadSubmitForm
+        workId={work.id}
+        workTitle={work.title}
+        chapters={chapters}
+        existingSubmission={freeReadSubmission}
+      />
 
-      {openPanel === "discoverBooks" && (
-        <div style={{
-          marginLeft: "1rem", paddingLeft: "1rem",
-          borderLeft: "2px solid var(--color-border-light)",
-        }}>
-          <DiscoverBooksSubmitForm
-            workId={work.id}
-            workTitle={work.title}
-            defaultAuthorName={defaultAuthorName}
-            existingSubmission={discoverBooksSubmission}
-          />
-        </div>
-      )}
+      {/* Discover Books widget */}
+      <DiscoverBooksSubmitForm
+        workId={work.id}
+        workTitle={work.title}
+        defaultAuthorName={defaultAuthorName}
+        existingSubmission={discoverBooksSubmission}
+      />
     </div>
   );
 }

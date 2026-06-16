@@ -5,6 +5,8 @@ import LikeButton from "./LikeButton";
 
 export const dynamic = "force-dynamic";
 
+type ContentSection = { title: string | null; html: string };
+
 export default async function ReaderPage({
   params,
 }: {
@@ -18,6 +20,7 @@ export default async function ReaderPage({
       id: true,
       submissionType: true,
       selectedChapterIds: true,
+      contentSnapshot: true,
       title: true,
       description: true,
       contentRating: true,
@@ -25,6 +28,7 @@ export default async function ReaderPage({
       coverImageData: true,
       publishedAt: true,
       user: { select: { username: true } },
+      // Only fetched for backward-compat fallback when no snapshot exists
       work: {
         select: {
           id: true,
@@ -49,24 +53,33 @@ export default async function ReaderPage({
     ? `/cover-backgrounds/cover-bg-${sub.coverBgIndex}.jpg`
     : null;
 
-  // Build content sections
-  type ContentSection = { title: string | null; html: string };
+  // Build content sections — prefer frozen snapshot, fall back to live content
+  // for older approved submissions that predate the snapshot feature.
   const sections: ContentSection[] = [];
 
-  if (sub.submissionType === "full") {
-    if (sub.work.content) {
-      sections.push({ title: null, html: sub.work.content });
-    }
-  } else {
-    // chapters submission
-    let ids: string[] = [];
-    try { ids = JSON.parse(sub.selectedChapterIds ?? "[]") as string[]; } catch { /* ignore */ }
-    const idSet = new Set(ids);
-    const ordered = sub.work.chapters
-      .filter((c) => idSet.has(c.id))
-      .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
-    for (const ch of ordered) {
-      sections.push({ title: ch.title, html: ch.content ?? "" });
+  if (sub.contentSnapshot) {
+    try {
+      const snap = JSON.parse(sub.contentSnapshot) as { sections: ContentSection[] };
+      sections.push(...snap.sections);
+    } catch { /* malformed snapshot — fall through to live content */ }
+  }
+
+  if (sections.length === 0) {
+    // Fallback: read from live work/chapter content (pre-snapshot records)
+    if (sub.submissionType === "full") {
+      if (sub.work.content) {
+        sections.push({ title: null, html: sub.work.content });
+      }
+    } else {
+      let ids: string[] = [];
+      try { ids = JSON.parse(sub.selectedChapterIds ?? "[]") as string[]; } catch { /* ignore */ }
+      const idSet = new Set(ids);
+      const ordered = sub.work.chapters
+        .filter((c) => idSet.has(c.id))
+        .sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
+      for (const ch of ordered) {
+        sections.push({ title: ch.title, html: ch.content ?? "" });
+      }
     }
   }
 
@@ -236,35 +249,16 @@ export default async function ReaderPage({
             marginBottom: "2rem",
           }}
         >
-          <span
-            style={{
-              display: "block",
-              width: "60px",
-              height: "1px",
-              background: "linear-gradient(to right, transparent, var(--color-border-light))",
-            }}
-          />
+          <span style={{ display: "block", width: "60px", height: "1px", background: "linear-gradient(to right, transparent, var(--color-border-light))" }} />
           <span style={{ color: "var(--color-gold)", fontSize: "0.65rem", opacity: 0.8 }}>✦</span>
-          <span
-            style={{
-              display: "block",
-              width: "60px",
-              height: "1px",
-              background: "linear-gradient(to left, transparent, var(--color-border-light))",
-            }}
-          />
+          <span style={{ display: "block", width: "60px", height: "1px", background: "linear-gradient(to left, transparent, var(--color-border-light))" }} />
         </div>
 
         {/* Bottom like + back */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
           <Link
             href="/free-read"
-            style={{
-              fontFamily: "var(--font-body)",
-              fontSize: "0.88rem",
-              color: "var(--color-ink-faint)",
-              textDecoration: "none",
-            }}
+            style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-faint)", textDecoration: "none" }}
           >
             ← Back to Stories
           </Link>

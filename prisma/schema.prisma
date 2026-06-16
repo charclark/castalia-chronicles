@@ -492,6 +492,7 @@ model FreeReadSubmission {
   // so the live version stays visible until Char approves the edit.
   pendingEdits       String?   // JSON: all text/meta fields of the proposed edit
   pendingCoverImageData Bytes? // binary cover for the proposed edit
+  contentSnapshot    String?   // JSON: frozen content at time of approval {sections:[{title,html}]}
   likes              FreeReadLike[]
 
   @@index([status])

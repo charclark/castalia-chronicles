@@ -149,6 +149,23 @@ export async function submitDiscoverBooks(
   return { success: true };
 }
 
+export async function withdrawDiscoverBooks(workId: string): Promise<{ error?: string }> {
+  const { universeId } = await requireUniverseEdit();
+
+  const work = await prisma.work.findFirst({ where: { id: workId, universeId } });
+  if (!work) return { error: "Work not found." };
+
+  await prisma.discoverBooksSubmission.deleteMany({
+    where: { workId, status: "pending" },
+  });
+
+  revalidatePath(`/admin/works/${workId}`);
+  revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
+  revalidatePath("/books");
+  return {};
+}
+
 export async function unpublishDiscoverBooks(workId: string): Promise<void> {
   await requireUniverseEdit();
   await prisma.discoverBooksSubmission.update({

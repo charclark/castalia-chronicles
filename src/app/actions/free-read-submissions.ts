@@ -9,6 +9,43 @@ import sharp from "sharp";
 
 export type FreeReadSubmissionState = { error?: string; success?: string } | null;
 
+// ── Build a frozen content snapshot ──────────────────────────────────────────
+// Called at approval time so the viewer always shows the approved content,
+// even if the author later edits the underlying work/chapters.
+
+async function snapshotContent(
+  workId: string,
+  submissionType: string,
+  selectedChapterIds: string | null
+): Promise<string> {
+  type Section = { title: string | null; html: string };
+  const sections: Section[] = [];
+
+  if (submissionType === "full") {
+    const work = await prisma.work.findUnique({
+      where: { id: workId },
+      select: { content: true },
+    });
+    sections.push({ title: null, html: work?.content ?? "" });
+  } else {
+    let ids: string[] = [];
+    try { ids = JSON.parse(selectedChapterIds ?? "[]") as string[]; } catch { /* ignore */ }
+    if (ids.length > 0) {
+      const chapters = await prisma.chapter.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, title: true, content: true },
+      });
+      const map = new Map(chapters.map((c) => [c.id, c]));
+      for (const cid of ids) {
+        const ch = map.get(cid);
+        if (ch) sections.push({ title: ch.title, html: ch.content ?? "" });
+      }
+    }
+  }
+
+  return JSON.stringify({ sections });
+}
+
 // ── Submit / resubmit ─────────────────────────────────────────────────────────
 
 export async function submitFreeRead(
@@ -82,16 +119,13 @@ export async function submitFreeRead(
 
     const updateData: Record<string, unknown> = {
       pendingEdits: JSON.stringify(pendingEdit),
-      rejectionNote: null, // clear any prior edit rejection note
+      rejectionNote: null,
     };
     if (coverImageData) {
       updateData.pendingCoverImageData = coverImageData;
     }
 
-    await prisma.freeReadSubmission.update({
-      where: { workId },
-      data: updateData,
-    });
+    await prisma.freeReadSubmission.update({ where: { workId }, data: updateData });
 
     revalidatePath(`/admin/works/${workId}`);
     revalidatePath("/admin/author-approvals");
@@ -114,6 +148,7 @@ export async function submitFreeRead(
     publishedAt: null,
     pendingEdits: null,
     pendingCoverImageData: null,
+    contentSnapshot: null,
     rejectionNote: null,
     ...(coverImageData !== null ? { coverImageData } : {}),
   };
@@ -137,6 +172,25 @@ export async function submitFreeRead(
   revalidatePath("/admin/my-publications");
   revalidatePath("/free-read");
   return { success: "submitted" };
+}
+
+// ── Withdraw a pending submission (author-initiated) ──────────────────────────
+
+export async function withdrawFreeRead(workId: string): Promise<{ error?: string }> {
+  const { universeId } = await requireUniverseEdit();
+
+  const work = await prisma.work.findFirst({ where: { id: workId, universeId } });
+  if (!work) return { error: "Work not found." };
+
+  await prisma.freeReadSubmission.deleteMany({
+    where: { workId, status: "pending" },
+  });
+
+  revalidatePath(`/admin/works/${workId}`);
+  revalidatePath("/admin/author-approvals");
+  revalidatePath("/admin/my-publications");
+  revalidatePath("/free-read");
+  return {};
 }
 
 // ── Unpublish (author removes their own approved submission) ──────────────────
@@ -165,12 +219,19 @@ export async function approveFreeReadSubmission(id: string): Promise<void> {
 
   const sub = await prisma.freeReadSubmission.findUnique({
     where: { id },
-    select: { pendingEdits: true, pendingCoverImageData: true, publishedAt: true },
+    select: {
+      pendingEdits: true,
+      pendingCoverImageData: true,
+      publishedAt: true,
+      workId: true,
+      submissionType: true,
+      selectedChapterIds: true,
+    },
   });
   if (!sub) return;
 
   if (sub.pendingEdits) {
-    // Approving an edit to an already-live submission: apply staged edits
+    // Approving an edit to an already-live submission: apply staged edits + snapshot new content
     type PendingEdit = {
       submissionType: string;
       selectedChapterIds: string | null;
@@ -190,7 +251,12 @@ export async function approveFreeReadSubmission(id: string): Promise<void> {
       coverUpdate.coverBgIndex = edit.coverBgIndex;
       coverUpdate.coverImageData = null;
     }
-    // if keepExistingCover: leave coverImageData and coverBgIndex unchanged
+
+    const contentSnapshot = await snapshotContent(
+      sub.workId,
+      edit.submissionType,
+      edit.selectedChapterIds
+    );
 
     await prisma.freeReadSubmission.update({
       where: { id },
@@ -200,6 +266,7 @@ export async function approveFreeReadSubmission(id: string): Promise<void> {
         title: edit.title,
         description: edit.description,
         contentRating: edit.contentRating,
+        contentSnapshot,
         reviewedAt: new Date(),
         pendingEdits: null,
         pendingCoverImageData: null,
@@ -208,10 +275,21 @@ export async function approveFreeReadSubmission(id: string): Promise<void> {
       },
     });
   } else {
-    // Approving a new (first-time or resubmitted) submission
+    // Approving a new (first-time or resubmitted) submission — snapshot at approval time
+    const contentSnapshot = await snapshotContent(
+      sub.workId,
+      sub.submissionType,
+      sub.selectedChapterIds
+    );
+
     await prisma.freeReadSubmission.update({
       where: { id },
-      data: { status: "approved", reviewedAt: new Date(), publishedAt: sub.publishedAt ?? new Date() },
+      data: {
+        status: "approved",
+        reviewedAt: new Date(),
+        publishedAt: sub.publishedAt ?? new Date(),
+        contentSnapshot,
+      },
     });
   }
 
@@ -232,7 +310,6 @@ export async function rejectFreeReadSubmission(id: string, rejectionNote?: strin
   if (!sub) return;
 
   if (sub.pendingEdits) {
-    // Rejecting an edit: clear the staged edit, keep the approved version live
     await prisma.freeReadSubmission.update({
       where: { id },
       data: {
@@ -242,7 +319,6 @@ export async function rejectFreeReadSubmission(id: string, rejectionNote?: strin
       },
     });
   } else {
-    // Rejecting a new submission
     await prisma.freeReadSubmission.update({
       where: { id },
       data: { status: "rejected", reviewedAt: new Date(), rejectionNote: rejectionNote ?? null },
@@ -281,9 +357,7 @@ export async function likeFreeRead(
     "unknown";
 
   try {
-    await prisma.freeReadLike.create({
-      data: { submissionId, ipAddress: ip },
-    });
+    await prisma.freeReadLike.create({ data: { submissionId, ipAddress: ip } });
   } catch {
     // Unique constraint — already liked from this IP; silently ignore
   }
