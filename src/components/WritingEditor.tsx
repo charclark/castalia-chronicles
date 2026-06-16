@@ -140,6 +140,45 @@ function getDomTextOffset(container: HTMLElement, targetNode: Node, targetOffset
   return offset;
 }
 
+// ── Clear marks on delete ─────────────────────────────────────────────────────
+// ProseMirror inherits storedMarks from adjacent text after a deletion, causing
+// newly typed text to silently re-apply the deleted text's formatting. Setting
+// storedMarks to [] (not null) after any delete step breaks the inheritance.
+
+const ClearMarksOnDelete = Extension.create({
+  name: "clearMarksOnDelete",
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        appendTransaction(transactions, _oldState, newState) {
+          // A ReplaceStep with to > from deleted content from the document.
+          const hasDeleteStep = transactions.some((tr) =>
+            tr.steps.some((step) => {
+              const json = step.toJSON() as {
+                stepType?: string;
+                from?: number;
+                to?: number;
+              };
+              return (
+                json.stepType === "replace" &&
+                typeof json.from === "number" &&
+                typeof json.to === "number" &&
+                json.to > json.from
+              );
+            })
+          );
+
+          // Only act when something was deleted and the result is a cursor.
+          if (!hasDeleteStep || !newState.selection.empty) return null;
+
+          // [] explicitly suppresses mark inheritance; null would inherit.
+          return newState.tr.setStoredMarks([]);
+        },
+      }),
+    ];
+  },
+});
+
 // ── Search ProseMirror plugin ──────────────────────────────────────────────────
 
 const searchPluginKey = new PluginKey<{
@@ -815,6 +854,7 @@ const ChapterSection = forwardRef<
       Underline,
       Highlight,
       SearchExtension,
+      ClearMarksOnDelete,
       Extension.create({
         name: "editorFlags",
         addProseMirrorPlugins: () => [makeFlagPlugin(chapterId, flagsRef)],
