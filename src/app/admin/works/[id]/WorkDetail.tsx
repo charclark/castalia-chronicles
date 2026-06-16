@@ -11,6 +11,7 @@ import {
   saveBuyLinks,
 } from "@/app/actions/works";
 import FreeReadSubmitForm from "./FreeReadSubmitForm";
+import DiscoverBooksSubmitForm from "./DiscoverBooksSubmitForm";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,20 @@ type FreeReadSubmission = {
   contentRating: string;
   coverBgIndex: number | null;
   hasCoverImage: boolean;
+  status: string;
+  submittedAt: string;
+} | null;
+
+type DiscoverBooksSubmission = {
+  id: string;
+  bookTitle: string;
+  authorName: string;
+  coverBgIndex: number | null;
+  hasCoverImage: boolean;
+  purchaseUrl: string;
+  purchaseLinkText: string;
+  description: string;
+  contentRating: string;
   status: string;
   submittedAt: string;
 } | null;
@@ -127,10 +142,14 @@ function PublishingSection({
   work,
   chapters,
   freeReadSubmission,
+  discoverBooksSubmission,
+  defaultAuthorName,
 }: {
   work: WorkMeta;
   chapters: ChapterItem[];
   freeReadSubmission: FreeReadSubmission;
+  discoverBooksSubmission: DiscoverBooksSubmission;
+  defaultAuthorName: string;
 }) {
   const [openPanel, setOpenPanel] = useState<"startReading" | "discoverBooks" | null>(null);
 
@@ -214,11 +233,13 @@ function PublishingSection({
         <div style={{
           marginLeft: "1rem", paddingLeft: "1rem",
           borderLeft: "2px solid var(--color-border-light)",
-          display: "flex", flexDirection: "column", gap: "1.75rem",
         }}>
-          <DescriptionEditor work={work} />
-          <div style={{ height: "1px", background: "var(--color-border)" }} />
-          <BuyLinksEditor work={work} />
+          <DiscoverBooksSubmitForm
+            workId={work.id}
+            workTitle={work.title}
+            defaultAuthorName={defaultAuthorName}
+            existingSubmission={discoverBooksSubmission}
+          />
         </div>
       )}
     </div>
@@ -428,6 +449,8 @@ export default function WorkDetail({
   canEdit = true,
   chapters,
   freeReadSubmission,
+  discoverBooksSubmission,
+  defaultAuthorName,
 }: {
   work: WorkMeta;
   availableImages: ImageOption[];
@@ -435,6 +458,8 @@ export default function WorkDetail({
   canEdit?: boolean;
   chapters: ChapterItem[];
   freeReadSubmission: FreeReadSubmission;
+  discoverBooksSubmission: DiscoverBooksSubmission;
+  defaultAuthorName: string;
 }) {
   const router = useRouter();
   const [renameState, renameAction, renamePending] = useActionState(renameWork, null);
@@ -622,6 +647,8 @@ export default function WorkDetail({
               work={work}
               chapters={chapters}
               freeReadSubmission={freeReadSubmission}
+              discoverBooksSubmission={discoverBooksSubmission}
+              defaultAuthorName={defaultAuthorName}
             />
           </div>
 

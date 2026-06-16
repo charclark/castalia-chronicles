@@ -9,7 +9,7 @@ export default async function AuthorApprovalsPage() {
   const session = await getSession();
   if (!session?.isSuperAdmin) redirect("/admin");
 
-  const [profiles, joinRequests, freeReadSubmissions] = await Promise.all([
+  const [profiles, joinRequests, freeReadSubmissions, discoverBooksSubmissions] = await Promise.all([
     prisma.authorProfile.findMany({
       orderBy: { submittedAt: "desc" },
       select: {
@@ -67,6 +67,26 @@ export default async function AuthorApprovalsPage() {
         user: { select: { id: true, username: true } },
       },
     }),
+    prisma.discoverBooksSubmission.findMany({
+      orderBy: { submittedAt: "desc" },
+      select: {
+        id: true,
+        bookTitle: true,
+        authorName: true,
+        coverBgIndex: true,
+        coverImageData: true,
+        purchaseUrl: true,
+        purchaseLinkText: true,
+        description: true,
+        contentRating: true,
+        status: true,
+        submittedAt: true,
+        reviewedAt: true,
+        publishedAt: true,
+        work: { select: { id: true, title: true } },
+        user: { select: { id: true, username: true } },
+      },
+    }),
   ]);
 
   // For chapter titles on "chapters" submissions
@@ -93,7 +113,7 @@ export default async function AuthorApprovalsPage() {
         Author Approvals
       </h2>
       <p style={{ fontFamily: "var(--font-body)", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "2.5rem" }}>
-        Review and approve author profiles, join requests, and Start Reading submissions.
+        Review and approve author profiles, join requests, Start Reading submissions, and Discover Books listings.
       </p>
 
       <ApprovalsClient
@@ -124,6 +144,22 @@ export default async function AuthorApprovalsPage() {
           work: s.work,
           user: s.user,
           chapterMap,
+        }))}
+        discoverBooksSubmissions={discoverBooksSubmissions.map((s) => ({
+          id: s.id,
+          bookTitle: s.bookTitle,
+          authorName: s.authorName,
+          coverBgIndex: s.coverBgIndex,
+          hasCoverImage: !!s.coverImageData,
+          purchaseUrl: s.purchaseUrl,
+          purchaseLinkText: s.purchaseLinkText,
+          description: s.description,
+          contentRating: s.contentRating,
+          status: s.status,
+          submittedAt: s.submittedAt.toISOString(),
+          work: s.work,
+          user: s.user,
+          isReplacing: s.status === "pending" && !!s.publishedAt,
         }))}
       />
     </div>

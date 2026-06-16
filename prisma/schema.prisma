@@ -29,7 +29,8 @@ model User {
   workShares          WorkShare[]
   feedbackShares      FeedbackShare[]
   authorProfile       AuthorProfile?
-  freeReadSubmissions FreeReadSubmission[]
+  freeReadSubmissions         FreeReadSubmission[]
+  discoverBooksSubmissions    DiscoverBooksSubmission[]
 }
 
 // --- Universe ---
@@ -397,7 +398,8 @@ model Work {
   chapters            Chapter[]
   flags               Flag[]
   shares              WorkShare[]
-  freeReadSubmission  FreeReadSubmission?
+  freeReadSubmission      FreeReadSubmission?
+  discoverBooksSubmission DiscoverBooksSubmission?
 
   @@index([universeId])
   @@index([coverImageId])
@@ -496,6 +498,48 @@ model FreeReadLike {
   submission   FreeReadSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   ipAddress    String
   createdAt    DateTime           @default(now())
+
+  @@unique([submissionId, ipAddress])
+  @@index([submissionId])
+}
+
+// --- Discover Books Submissions ---
+// One per work. status: "pending" | "approved" | "rejected".
+// Approved submissions appear on the public Discover Books page.
+// coverImageData: author-uploaded cover (binary, compressed via Sharp)
+// coverBgIndex: 1-10, which preset background was chosen (null if uploading own cover)
+// When coverBgIndex is set, the bookTitle + authorName are overlaid on the background.
+model DiscoverBooksSubmission {
+  id               String    @id @default(cuid())
+  workId           String    @unique
+  work             Work      @relation(fields: [workId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookTitle        String
+  authorName       String
+  coverImageData   Bytes?
+  coverBgIndex     Int?
+  purchaseUrl      String
+  purchaseLinkText String
+  description      String
+  contentRating    String    // "General" | "Teen" | "Mature Themes" | "Adult"
+  status           String    @default("pending")
+  submittedAt      DateTime  @default(now())
+  reviewedAt       DateTime?
+  publishedAt      DateTime?
+  likes            DiscoverBooksLike[]
+
+  @@index([status])
+}
+
+// --- Discover Books Likes ---
+// One row per (submission, IP). Prevents duplicate likes without requiring login.
+model DiscoverBooksLike {
+  id           String                  @id @default(cuid())
+  submissionId String
+  submission   DiscoverBooksSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  ipAddress    String
+  createdAt    DateTime                @default(now())
 
   @@unique([submissionId, ipAddress])
   @@index([submissionId])

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { approveAuthorProfile, rejectAuthorProfile } from "@/app/actions/author-profiles";
 import { approveJoinRequest, rejectJoinRequest } from "@/app/actions/join-requests";
 import { approveFreeReadSubmission, rejectFreeReadSubmission } from "@/app/actions/free-read-submissions";
+import { approveDiscoverBooksSubmission, rejectDiscoverBooksSubmission } from "@/app/actions/discover-books-submissions";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -369,6 +370,110 @@ function FreeReadSubCard({ sub }: { sub: FreeReadSub }) {
   );
 }
 
+// ── Discover Books Submission Card ────────────────────────────────────────────
+
+type DiscoverBooksSub = {
+  id: string;
+  bookTitle: string;
+  authorName: string;
+  coverBgIndex: number | null;
+  hasCoverImage: boolean;
+  purchaseUrl: string;
+  purchaseLinkText: string;
+  description: string;
+  contentRating: string;
+  status: string;
+  submittedAt: string;
+  work: { id: string; title: string };
+  user: { id: string; username: string };
+  isReplacing: boolean;
+};
+
+function DiscoverBooksSubCard({ sub }: { sub: DiscoverBooksSub }) {
+  const [status, setStatus] = useState(sub.status);
+  const [pending, startTransition] = useTransition();
+  const [expanded, setExpanded] = useState(sub.status === "pending");
+
+  const submitted = new Date(sub.submittedAt).toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  });
+
+  const coverSrc = sub.hasCoverImage
+    ? `/api/discover-books-cover/${sub.id}`
+    : sub.coverBgIndex
+    ? `/cover-backgrounds/cover-bg-${sub.coverBgIndex}.jpg`
+    : null;
+
+  return (
+    <div style={{ ...cardStyle, opacity: pending ? 0.6 : 1, transition: "opacity 0.15s" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem", marginBottom: "0.6rem", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontFamily: "var(--font-heading)", fontSize: "1.1rem", color: "var(--color-ink)", marginBottom: "0.15rem" }}>
+            {sub.bookTitle}
+          </p>
+          <p style={metaText}>
+            by {sub.authorName} · @{sub.user.username} · {sub.work.title} · {submitted}
+          </p>
+          <p style={{ ...metaText, marginTop: "0.15rem" }}>
+            <strong style={{ color: "var(--color-ink-muted)" }}>Rating:</strong> {sub.contentRating}
+            {" · "}
+            <strong style={{ color: "var(--color-ink-muted)" }}>Link:</strong> {sub.purchaseLinkText}
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+          {sub.isReplacing && (
+            <span style={{
+              fontFamily: "var(--font-body)", fontSize: "0.65rem", letterSpacing: "0.08em",
+              textTransform: "uppercase", color: "var(--color-gold)",
+              background: "rgba(201,168,76,0.08)", border: "1px solid var(--color-gold-dim)",
+              borderRadius: "2px", padding: "0.1rem 0.45rem",
+            }}>
+              Replacing live listing
+            </span>
+          )}
+          <StatusBadge status={status} />
+          <button
+            type="button"
+            onClick={() => setExpanded((x) => !x)}
+            style={{ fontFamily: "var(--font-body)", fontSize: "0.75rem", background: "transparent", border: "1px solid var(--color-border)", borderRadius: "3px", padding: "0.2rem 0.6rem", color: "var(--color-ink-faint)", cursor: "pointer" }}
+          >
+            {expanded ? "Collapse" : "Details"}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", marginBottom: "1rem" }}>
+          <div style={{ display: "flex", gap: "1rem", alignItems: "flex-start", flexWrap: "wrap" }}>
+            {coverSrc && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={coverSrc} alt="Cover" style={{ width: "72px", height: "108px", objectFit: "cover", borderRadius: "3px", border: "1px solid var(--color-border)", flexShrink: 0 }} />
+            )}
+            <div style={{ flex: 1 }}>
+              <p style={metaLabel}>Description</p>
+              <p style={{ fontFamily: "var(--font-body)", fontSize: "0.88rem", color: "var(--color-ink-muted)", lineHeight: 1.65, whiteSpace: "pre-wrap" }}>{sub.description}</p>
+              <p style={{ ...metaLabel, marginTop: "0.75rem" }}>Purchase URL</p>
+              <a href={sub.purchaseUrl} target="_blank" rel="noopener noreferrer" style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-gold)", wordBreak: "break-all" }}>
+                {sub.purchaseUrl}
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ApproveRejectButtons
+        status={status} pending={pending}
+        onApprove={() => startTransition(async () => { await approveDiscoverBooksSubmission(sub.id); setStatus("approved"); })}
+        onReject={() => {
+          if (!window.confirm(`Reject "${sub.bookTitle}" by ${sub.authorName}?`)) return;
+          startTransition(async () => { await rejectDiscoverBooksSubmission(sub.id); setStatus("rejected"); });
+        }}
+      />
+    </div>
+  );
+}
+
 // ── Section wrapper ───────────────────────────────────────────────────────────
 
 function CardSection<T extends { id: string; status: string }>({
@@ -422,13 +527,33 @@ export default function ApprovalsClient({
   profiles,
   joinRequests,
   freeReadSubmissions,
+  discoverBooksSubmissions,
 }: {
   profiles: Profile[];
   joinRequests: JoinRequest[];
   freeReadSubmissions: FreeReadSub[];
+  discoverBooksSubmissions: DiscoverBooksSub[];
 }) {
   return (
     <div>
+      {/* Discover Books Submissions */}
+      <div style={{ marginBottom: "3.5rem" }}>
+        <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
+          Discover Books Submissions
+        </h3>
+        <p style={{ fontFamily: "var(--font-body)", fontSize: "0.82rem", color: "var(--color-ink-faint)", fontStyle: "italic", marginBottom: "1.75rem" }}>
+          Book listings submitted for the public Discover Books page.
+        </p>
+        <CardSection
+          emptyLabel="Discover Books submissions"
+          items={discoverBooksSubmissions}
+          renderCard={(s) => <DiscoverBooksSubCard key={s.id} sub={s} />}
+        />
+      </div>
+
+      {/* Divider */}
+      <div style={{ height: "1px", background: "var(--color-border-light)", marginBottom: "3.5rem" }} />
+
       {/* Start Reading Submissions */}
       <div style={{ marginBottom: "3.5rem" }}>
         <h3 style={{ fontFamily: "var(--font-heading)", fontSize: "1.35rem", fontWeight: 400, color: "var(--color-ink)", marginBottom: "0.3rem" }}>
